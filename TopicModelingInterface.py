@@ -1,12 +1,13 @@
 import random
 import numpy as np
 import pandas as pd
+from pathlib import Path
 from tqdm import tqdm
 from sklearn.datasets import fetch_20newsgroups
 from sklearn.metrics.cluster import v_measure_score, homogeneity_score, completeness_score, adjusted_mutual_info_score
 import tiktoken
 from collections import defaultdict
-from Datasets import get_nyt, get_arxiv, get_pubmed
+from Datasets import get_nyt, get_arxiv, get_pubmed, get_dataset_from_metadata
 
 
 class TopicModelingInterface:
@@ -36,16 +37,32 @@ class TopicModelingInterface:
         for counter in tqdm(range(self.n_runs)):
             enc = tiktoken.encoding_for_model("gpt-3.5-turbo")
 
-            if self.dataset == "NYT":
+            # Dataset selection logic
+            if self.dataset == "GENERIC":
+                if "METADATA_PATH" not in self.config:
+                    raise ValueError("DATASET='GENERIC' requires METADATA_PATH in config")
+                
+                metadata_path = Path(self.config["METADATA_PATH"])
+                if not metadata_path.exists():
+                    raise FileNotFoundError(f"Metadata file not found: {metadata_path}")
+                
+                newsgroups_train = get_dataset_from_metadata(metadata_path)
+                dataset_name = metadata_path.parent.name  
+            elif self.dataset == "NYT":
                 newsgroups_train = get_nyt()
+                dataset_name = "NYT"
             elif self.dataset == "ARXIV":
                 newsgroups_train = get_arxiv()
+                dataset_name = "ARXIV"
             elif self.dataset == "PUBMED":
-                newsgroups_train = get_pubmed()   
+                newsgroups_train = get_pubmed()
+                dataset_name = "PUBMED"
             else:
+                # Default to 20 Newsgroups
                 newsgroups_train = fetch_20newsgroups(
                     subset="train", remove=("headers", "footers", "quotes")
                 )
+                dataset_name = "NEWSGROUPS"
 
             filtered_data_indices = [
                 i
@@ -76,10 +93,10 @@ class TopicModelingInterface:
                 score_df, columns=["metric_name", "score", "num_topics"]
             )
             score_df_out.to_csv(
-                f"data_out/coherence_scores_{self.__class__.__name__}_{self.n_documents}_{self.dataset}.csv"
+                f"data_out/coherence_scores_{self.__class__.__name__}_{self.n_documents}_{dataset_name}.csv"
             )
             pd.concat(topic_name_df).to_csv(
-                f"data_out/topic_names_{self.__class__.__name__}_{self.n_documents}_{self.dataset}.csv"
+                f"data_out/topic_names_{self.__class__.__name__}_{self.n_documents}_{dataset_name}.csv"
             )
 
     def sample_equal_per_class(self, data, labels, n_documents, random_state=None):

@@ -1,4 +1,29 @@
+import json
 import pandas as pd
+from pathlib import Path
+
+
+class GenericDataset:
+    """Generic dataset class that loads from metadata.json."""
+    def __init__(self, metadata_path: Path):
+        with open(metadata_path, 'r') as f:
+            metadata = json.load(f)
+        
+        dataset_path = Path(metadata['dataset_path'])
+        self.df = pd.read_csv(dataset_path)
+        self.data = self.df[metadata['text_column']].tolist()
+        
+        # Handle category column if present
+        if 'category_column' in metadata and metadata['category_column']:
+            category_col = metadata['category_column']
+            idx_mapping = {x: i for i, x in enumerate(self.df[category_col].unique())}
+            self.target = [idx_mapping[x] for x in self.df[category_col]]
+            self.target_names = {i: x for i, x in enumerate(self.df[category_col].unique())}
+        else:
+            # No category column - create dummy targets (all 0)
+            self.target = [0] * len(self.data)
+            self.target_names = {0: 'unknown'}
+
 
 class NYTDataset:
     def __init__(self):
@@ -34,6 +59,10 @@ def get_arxiv():
 def get_pubmed():
     return PubmedDataset()
 
+
+def get_dataset_from_metadata(metadata_path: Path):
+    """Load dataset from metadata.json file."""
+    return GenericDataset(metadata_path)
 
 
 if __name__ == '__main__':

@@ -17,6 +17,7 @@ if __name__ == "__main__":
         "N_TOPICS": 50,
         "TOKEN_LIMIT": 6_000,
         "DATASET": "NYT",
+        # "METADATA_PATH": "data_output/metadata.json",
         "MODEL": "gpt-4o",
         "N_FEATURES": 1000,
     }
