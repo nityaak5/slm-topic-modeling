@@ -1,6 +1,0 @@
-{
-  "dataset_path": "/Users/nityaakalra/Desktop/nyt_topic_modeling/topic_modeling_paper/data_in/ny_times_articles.csv",
-  "number_of_documents": 7805,
-  "text_column": "abstract",
-  "category_column": "keyword"
-}

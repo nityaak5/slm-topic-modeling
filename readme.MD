@@ -5,10 +5,97 @@ Each technique implements `TopicModelingInterface`. `GenAIMethod` is a computati
 strategy where a set of candidate topics is iteratively reduced. We disregarded this technique for the simpler
 `GenAiMethodOneShot`, which is described as `TopicGen` in the paper.
 
-To install, run `pip install -r requirements.txt`. The code is tested on Python 3.9.
+To install, run `pip install -r requirements.txt`. 
 
-To use TopicGen or BERTopicModel, an OPENAI API key is required. Please fill in `example.env` and rename it to `.env`.
+**Important:** This codebase requires Python 3.10 or higher due to vLLM dependency requirements.
 
-To use your own data place it in `data_in` and modify `Datasets`. Datasets used in the study are provided in `data_in`.
+This codebase uses vLLM for offline LLM inference. All inference runs locally and offline - no API keys or external services required.
 
-To run, go to RunModels, **but please keep in mind that the cost in terms of API calls can be high depending on the average document length and dataset size.**
+**Note**: vLLM requires a GPU with CUDA. It does not work on CPU-only systems.
+
+## Configuration
+
+Configuration is managed via `config.json`. Key settings include:
+
+- **VLLM_MODEL**: vLLM model identifier or path (default: `meta-llama/Llama-2-7b-chat-hf`)
+- **MODEL**: Model name (for backward compatibility, should match VLLM_MODEL)
+- **N_TOPICS**: Number of topics to extract
+- **N_documents**: Number of documents to process
+- **TOKEN_LIMIT**: Maximum tokens per request
+- **DATASET**: Dataset name (NYT, ARXIV, PUBMED, etc.)
+- **EMBEDDING_MODEL**: Embedding model for BERTopic (default: `all-MiniLM-L6-v2`)
+- **OUTPUT_DIR**: Directory for output files (coherence scores, topic names). Default: `data_out`
+
+You can override `VLLM_MODEL` via environment variable: `export VLLM_MODEL="your-model-name"`
+
+## Model Storage
+
+Models are automatically downloaded and stored in the `models/` directory within the repository. See `models/README.md` for details.
+
+## Usage
+
+### Predefined Datasets
+
+Run with predefined datasets (NYT, ARXIV, PUBMED):
+
+```bash
+python RunModels.py --dataset NYT
+```
+
+### Custom CSV Dataset
+
+Run with your own CSV file. Metadata is automatically created - no separate step needed:
+
+```bash
+python RunModels.py --dataset-csv data_in/my_data.csv --text-column text --category-column category
+```
+
+The script will:
+1. Load your CSV file
+2. Validate columns
+3. Automatically create `metadata.json` in `data_output/`
+4. Run topic modeling with GENERIC dataset mode
+
+### CLI Options
+
+```bash
+# Override config values
+python RunModels.py --dataset NYT --n-topics 30 --n-documents 400
+
+# Use specific method
+python RunModels.py --dataset NYT --method-type GenAIMethodOneShot
+
+# Multiple methods
+python RunModels.py --dataset NYT --method-type GenAIMethodOneShot BERTopicModel
+
+# Check dependencies
+python RunModels.py --check-deps
+
+# Full help
+python RunModels.py --help
+```
+
+### Configuration
+
+Configuration is loaded from `config.json` by default. CLI arguments override config.json values.
+
+### HPC Usage
+
+On HPC systems, use the same command. The script automatically:
+- Checks dependencies
+- Creates metadata for CSV datasets
+- Uses configuration from `config.json` or CLI arguments
+
+Example HPC job script:
+```bash
+#!/bin/bash
+#SBATCH --job-name=topic_modeling
+#SBATCH --gres=gpu:1
+#SBATCH --cpus-per-task=8
+#SBATCH --mem=32G
+
+module load python/3.12 cuda/11.8
+source venv/bin/activate
+
+python RunModels.py --dataset-csv /path/to/data.csv --text-column text
+```

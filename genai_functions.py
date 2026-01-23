@@ -1,18 +1,55 @@
 from itertools import chain
-from openai import OpenAI
+from vllm import LLM, SamplingParams
+from pathlib import Path
 
 import json
-import aiohttp
 import asyncio
 import os
 
 from Auxiliary import delay_execution, delay_execution_async
-from dotenv import load_dotenv
 
-load_dotenv(".env")
+# Get project root directory (parent of this file's directory)
+PROJECT_ROOT = Path(__file__).parent
+MODELS_DIR = PROJECT_ROOT / "models"
 
-API_KEY = os.getenv("OPENAI_KEY")
-client = OpenAI(api_key=API_KEY)
+# Set HuggingFace cache to use our models directory
+
+if "HF_HOME" not in os.environ:
+    os.environ["HF_HOME"] = str(MODELS_DIR)
+if "TRANSFORMERS_CACHE" not in os.environ:
+    os.environ["TRANSFORMERS_CACHE"] = str(MODELS_DIR / "transformers")
+if "HF_DATASETS_CACHE" not in os.environ:
+    os.environ["HF_DATASETS_CACHE"] = str(MODELS_DIR / "datasets")
+
+# Initialize vLLM LLM instance
+# Model can be specified via:
+# 1. VLLM_MODEL environment variable (takes precedence)
+# 2. Local path (absolute or relative to project root)
+# 3. HuggingFace model identifier (will download to models/)
+_llm = None
+
+def get_llm():
+    """Get or initialize the vLLM LLM instance."""
+    global _llm
+    if _llm is None:
+        # Read model name lazily (allows config.json to set env var before this is called)
+        _model_name = os.getenv("VLLM_MODEL", "meta-llama/Llama-2-7b-chat-hf")
+        # Check if model_name is a local path
+        model_path = Path(_model_name)
+        
+        # Try as absolute path first
+        if model_path.is_absolute() and model_path.exists() and model_path.is_dir():
+            _llm = LLM(model=str(model_path))
+        # Try as relative path from project root
+        elif (PROJECT_ROOT / model_path).exists() and (PROJECT_ROOT / model_path).is_dir():
+            _llm = LLM(model=str(PROJECT_ROOT / model_path))
+        else:
+            # HuggingFace model identifier - will download to models/ via HF_HOME
+            print(f"Loading model: {_model_name}")
+            print(f"Models will be cached in: {MODELS_DIR}")
+            _llm = LLM(model=_model_name)
+    return _llm
+
 TEMPERATURE = 0
 
 
@@ -167,125 +204,125 @@ def topic_buildup_prompt(topics, curr_list, final_size):
     
 
 @delay_execution(seconds=5, tries=2)
-def complete_openai_request(prompt, model="gpt-4o", timeout=30, temperature=0):
-    response = client.chat.completions.create(
-        model=model,
-        response_format={"type": "json_object"},
-        messages=[
-            {
-                "role": "system",
-                "content": "You are a helpful assistant designed to output JSON.",
-            },
-            {"role": "user", "content": prompt},
-        ],
-        timeout=timeout,
+def complete_openai_request(prompt, model=None, timeout=30, temperature=0):
+    """Complete a request using vLLM. Model parameter is ignored, using configured vLLM model."""
+    llm = get_llm()
+    
+    # Format prompt with system message for JSON output
+    formatted_prompt = f"You are a helpful assistant designed to output JSON.\n\n{prompt}"
+    
+    sampling_params = SamplingParams(
         temperature=temperature,
         max_tokens=2_000,
     )
-
-    json_string = response.choices[0].message.content
+    
+    outputs = llm.generate([formatted_prompt], sampling_params)
+    json_string = outputs[0].outputs[0].text.strip()
+    
+    # Try to extract JSON from the response if it's wrapped in markdown or other text
+    json_string = json_string.strip()
+    if json_string.startswith("```json"):
+        json_string = json_string[7:]
+    if json_string.startswith("```"):
+        json_string = json_string[3:]
+    if json_string.endswith("```"):
+        json_string = json_string[:-3]
+    json_string = json_string.strip()
+    
     json_dict = json.loads(json_string)
     return json_dict
 
 
 @delay_execution_async(seconds=5, tries=30)
 async def complete_openai_request_http(session, prompt, model, timeout):
-    headers = {"Content-Type": "application/json", "Authorization": f"Bearer {API_KEY}"}
-    data = {
-        "model": model,
-        "response_format": {"type": "json_object"},
-        "messages": [
-            {
-                "role": "system",
-                "content": "You are a helpful assistant designed to output JSON.",
-            },
-            {"role": "user", "content": prompt},
-        ],
-        "temperature": TEMPERATURE,
-    }
-    timeout = aiohttp.ClientTimeout(
-        total=timeout
-    )  # Set the total timeout for the whole operation
-    async with session.post(
-        "https://api.openai.com/v1/chat/completions",
-        headers=headers,
-        json=data,
-        timeout=timeout,
-    ) as response:
-        if response.status != 200:
-            print(await response.text())
-            print(prompt[:200])
-            response.raise_for_status()  # This will raise an exception for HTTP errors
-        response_json = await response.json()
-        response_json = response_json["choices"][0]["message"]["content"]
-        return json.loads(response_json)
+    """Complete a request using vLLM (async wrapper)."""
+    # Run vLLM generation in executor to avoid blocking
+    loop = asyncio.get_event_loop()
+    result = await loop.run_in_executor(
+        None,
+        lambda: complete_openai_request(prompt, model, timeout, TEMPERATURE)
+    )
+    return result
      
 @delay_execution_async(seconds=5, tries=30)
 async def complete_openai_request_http_logprobs(session, prompt, model, timeout):
-    headers = {"Content-Type": "application/json", "Authorization": f"Bearer {API_KEY}"}
-    data = {
-        "model": model,
-        "response_format": {"type": "json_object"},
-        "messages": [
-            {
-                "role": "system",
-                "content": "You are a helpful assistant designed to output JSON.",
+    """Complete a request using vLLM with logprobs (async wrapper)."""
+    llm = get_llm()
+    formatted_prompt = f"You are a helpful assistant designed to output JSON.\n\n{prompt}"
+    
+    sampling_params = SamplingParams(
+        temperature=TEMPERATURE,
+        max_tokens=2_000,
+        logprobs=20,  # vLLM supports logprobs parameter
+    )
+    
+    loop = asyncio.get_event_loop()
+    outputs = await loop.run_in_executor(
+        None,
+        lambda: llm.generate([formatted_prompt], sampling_params)
+    )
+    
+    # Format response similar to OpenAI API for compatibility
+    output = outputs[0].outputs[0]
+    response_json = {
+        "choices": [{
+            "message": {
+                "content": output.text.strip()
             },
-            {"role": "user", "content": prompt},
-        ],
-        "temperature": TEMPERATURE,
-        "logprobs": True,
-        "top_logprobs": 20,
+            "logprobs": {
+                "content": output.logprobs if hasattr(output, 'logprobs') else None
+            }
+        }]
     }
-    timeout = aiohttp.ClientTimeout(
-        total=timeout
-    )  # Set the total timeout for the whole operation
-    async with session.post(
-        "https://api.openai.com/v1/chat/completions",
-        headers=headers,
-        json=data,
-        timeout=timeout,
-    ) as response:
-        if response.status != 200:
-            print(await response.text())
-            print(prompt[:200])
-            response.raise_for_status()  # This will raise an exception for HTTP errors
-        response_json = await response.json()
-        return response_json
+    return response_json
 
 def complete_openai_request_parralel(
-    prompts, model="gpt-3.5-turbo", timeout=30, batch_size=100, logprobs=False
+    prompts, model=None, timeout=30, batch_size=100, logprobs=False
 ):
-
-    async def parralel_openai_request(prompts, model, timeout, batch_size):
-        async with aiohttp.ClientSession() as session:
-            if logprobs:
-                  tasks = [
-                     complete_openai_request_http_logprobs(session, prompt, model, timeout)
-                     for prompt in prompts
-                  ]
-            else:
-                  tasks = [
-                complete_openai_request_http(session, prompt, model, timeout)
-                for prompt in prompts
-            ]
-            all_objects = []
-            # gather preserves the order of the tasks
-            for i in range(0, len(tasks), batch_size):
-                responses = await asyncio.gather(
-                    *tasks[i : i + batch_size], return_exceptions=True
-                )
-                for response in responses:
-                    if isinstance(response, Exception):
-                        # return None if there was an error
-                        all_objects.append(None)
-                    else:
-                        all_objects.append(response)
-                await asyncio.sleep(5)
-
-            return all_objects
-
-    responses = asyncio.run(
-        parralel_openai_request(prompts, model, timeout, batch_size)
+    """Complete multiple requests in parallel using vLLM batch processing."""
+    llm = get_llm()
+    
+    # Format prompts with system message
+    formatted_prompts = [
+        f"You are a helpful assistant designed to output JSON.\n\n{prompt}"
+        for prompt in prompts
+    ]
+    
+    sampling_params = SamplingParams(
+        temperature=TEMPERATURE,
+        max_tokens=2_000,
+        logprobs=20 if logprobs else None,
     )
-    return responses
+    
+    # vLLM handles batching internally, but we can process in chunks to manage memory
+    all_objects = []
+    for i in range(0, len(formatted_prompts), batch_size):
+        batch_prompts = formatted_prompts[i : i + batch_size]
+        try:
+            outputs = llm.generate(batch_prompts, sampling_params)
+            for output in outputs:
+                json_string = output.outputs[0].text.strip()
+                # Try to extract JSON from the response
+                json_string = json_string.strip()
+                if json_string.startswith("```json"):
+                    json_string = json_string[7:]
+                if json_string.startswith("```"):
+                    json_string = json_string[3:]
+                if json_string.endswith("```"):
+                    json_string = json_string[:-3]
+                json_string = json_string.strip()
+                
+                try:
+                    json_dict = json.loads(json_string)
+                    if logprobs and hasattr(output.outputs[0], 'logprobs'):
+                        # Include logprobs if requested
+                        json_dict["_logprobs"] = output.outputs[0].logprobs
+                    all_objects.append(json_dict)
+                except json.JSONDecodeError:
+                    all_objects.append(None)
+        except Exception as e:
+            print(f"Error processing batch: {e}")
+            # Add None for each prompt in the failed batch
+            all_objects.extend([None] * len(batch_prompts))
+    
+    return all_objects

@@ -1,18 +1,14 @@
-import os
-import openai
-from bertopic.backend import OpenAIBackend
+from sentence_transformers import SentenceTransformer
 from bertopic import BERTopic
 from TopicModelingInterface import TopicModelingInterface
-from dotenv import load_dotenv
-
-load_dotenv(".env")
 
 class BERTopicModel(TopicModelingInterface):
     def __init__(self, config):
         super().__init__(config)
-        API_KEY = os.getenv("OPENAI_KEY")
-        client = openai.OpenAI(api_key=API_KEY)
-        self.embedding_model = OpenAIBackend(client, "text-embedding-3-large")
+        # Use sentence-transformers for embeddings (offline, no API required)
+        # Default to all-MiniLM-L6-v2, but can be configured via environment variable
+        embedding_model_name = config.get("EMBEDDING_MODEL", "all-MiniLM-L6-v2")
+        self.embedding_model = SentenceTransformer(embedding_model_name)
 
     def fit_transform(self, documents):
         model = BERTopic(

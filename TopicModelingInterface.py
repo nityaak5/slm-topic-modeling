@@ -89,14 +89,18 @@ class TopicModelingInterface:
             score_df.append(("adjusted_mutual_info", adjusted_mutual_info_score(labels, topics), num_topics))
             topic_name_df.append(pd.DataFrame({"topic_name": topic_names, "ground_truth": ground_truth_names, "run": counter}))
 
+            # Get output directory from config, default to "data_out"
+            output_dir = Path(self.config.get("OUTPUT_DIR", "data_out"))
+            output_dir.mkdir(parents=True, exist_ok=True)
+            
             score_df_out = pd.DataFrame(
                 score_df, columns=["metric_name", "score", "num_topics"]
             )
             score_df_out.to_csv(
-                f"data_out/coherence_scores_{self.__class__.__name__}_{self.n_documents}_{dataset_name}.csv"
+                output_dir / f"coherence_scores_{self.__class__.__name__}_{self.n_documents}_{dataset_name}.csv"
             )
             pd.concat(topic_name_df).to_csv(
-                f"data_out/topic_names_{self.__class__.__name__}_{self.n_documents}_{dataset_name}.csv"
+                output_dir / f"topic_names_{self.__class__.__name__}_{self.n_documents}_{dataset_name}.csv"
             )
 
     def sample_equal_per_class(self, data, labels, n_documents, random_state=None):
