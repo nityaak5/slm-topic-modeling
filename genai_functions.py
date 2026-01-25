@@ -17,6 +17,18 @@ if "TRANSFORMERS_CACHE" not in os.environ:
 if "HF_DATASETS_CACHE" not in os.environ:
     os.environ["HF_DATASETS_CACHE"] = str(MODELS_DIR / "datasets")
 
+# Ensure HF_TOKEN is available for vLLM (vLLM requires explicit HF_TOKEN env var for gated models)
+# Try to get token from huggingface-cli login cache if HF_TOKEN not set
+if "HF_TOKEN" not in os.environ:
+    try:
+        from huggingface_hub import HfFolder
+        token = HfFolder.get_token()
+        if token:
+            os.environ["HF_TOKEN"] = token
+            print("Using HuggingFace token from login cache")
+    except Exception:
+        pass  # If we can't get token, vLLM will fail with a clear error
+
 
 # Initialize vLLM LLM instance
 # Model can be specified via:
@@ -30,7 +42,7 @@ def get_llm():
     global _llm
     if _llm is None:
         # Read model name lazily (allows config.json to set env var before this is called)
-        _model_name = os.getenv("VLLM_MODEL", "meta-llama/Llama-2-7b-chat-hf")
+        _model_name = os.getenv("VLLM_MODEL", "meta-llama/Llama-2-7b-hf")
         # Check if model_name is a local path
         model_path = Path(_model_name)
         
@@ -57,10 +69,11 @@ def get_tokenizer():
         from transformers import AutoTokenizer
     except Exception as exc:
         raise RuntimeError("transformers is required to load the tokenizer") from exc
-    model_name = os.getenv("VLLM_MODEL", "meta-llama/Llama-2-7b-chat-hf")
+    model_name = os.getenv("VLLM_MODEL", "meta-llama/Llama-2-7b-hf")
     return AutoTokenizer.from_pretrained(model_name)
 
 def _format_prompt(prompt):
+    """Format prompt for LLM. Base models use plain text formatting."""
     return f"You are a helpful assistant designed to output JSON.\n\n{prompt}"
 
 def _parse_json_response(text, strict=True):
@@ -200,7 +213,8 @@ def complete_request(
     formatted_prompts = [_format_prompt(prompt) for prompt in prompt_list]
     sampling_params = SamplingParams(
         temperature=temperature,
-        max_tokens=2_000,
+        max_tokens=500,  # Reduced for base models - they tend to generate too much
+        stop=["\n\n", "###", "Example", "Notes"],  # Stop at common continuation patterns
         logprobs=20 if logprobs else None,
     )
     try:
