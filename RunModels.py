@@ -139,9 +139,8 @@ def load_config(config_path="config.json", cli_overrides=None):
             "N_runs": 5,
             "N_documents": 800,
             "N_TOPICS": 50,
-            "TOKEN_LIMIT": 6000,
+            "TOKEN_LIMIT": null,
             "DATASET": "NYT",
-            "MODEL": "meta-llama/Llama-2-7b-chat-hf",
             "N_FEATURES": 1000,
             "EMBEDDING_MODEL": "all-MiniLM-L6-v2",
             "VLLM_MODEL": "meta-llama/Llama-2-7b-chat-hf",
@@ -156,8 +155,6 @@ def load_config(config_path="config.json", cli_overrides=None):
     # Override with environment variables if set
     if "VLLM_MODEL" in os.environ:
         config["VLLM_MODEL"] = os.environ["VLLM_MODEL"]
-        # Also update MODEL for backward compatibility
-        config["MODEL"] = os.environ["VLLM_MODEL"]
     
     # Set VLLM_MODEL environment variable for genai_functions
     if "VLLM_MODEL" in config:
@@ -355,7 +352,6 @@ Examples:
         cli_overrides["SEED"] = args.seed
     if args.vllm_model:
         cli_overrides["VLLM_MODEL"] = args.vllm_model
-        cli_overrides["MODEL"] = args.vllm_model
     if args.output_dir:
         cli_overrides["OUTPUT_DIR"] = str(args.output_dir)
     

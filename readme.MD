@@ -18,7 +18,6 @@ This codebase uses vLLM for offline LLM inference. All inference runs locally an
 Configuration is managed via `config.json`. Key settings include:
 
 - **VLLM_MODEL**: vLLM model identifier or path (default: `meta-llama/Llama-2-7b-chat-hf`)
-- **MODEL**: Model name (for backward compatibility, should match VLLM_MODEL)
 - **N_TOPICS**: Number of topics to extract
 - **N_documents**: Number of documents to process
 - **TOKEN_LIMIT**: Maximum tokens per request

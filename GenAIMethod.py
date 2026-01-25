@@ -1,12 +1,11 @@
 from TopicModelingInterface import TopicModelingInterface
-import tiktoken
 from genai_functions import (
-    complete_openai_request,
+    complete_request,
     chunk_documents,
+    get_tokenizer,
     topic_creation_prompt,
     topic_elimination_prompt,
     topic_classification_prompt,
-    complete_openai_request_parralel,
 )
 from itertools import chain
 import random
@@ -16,25 +15,21 @@ import json
 class GenAIMethod(TopicModelingInterface):
     def __init__(self, config):
         super().__init__(config)
-        self.model = config["MODEL"]
 
     def fit_transform(self, documents):
-        enc = tiktoken.encoding_for_model("gpt-3.5-turbo")
-        encoding_function = lambda x: enc.encode(x)
-        decoding_function = lambda x: enc.decode(x)
+        tokenizer = get_tokenizer()
         
+        # Use reasonable max_documents: at least 10 docs per chunk, or 1/4 of total
+        max_docs_per_chunk = max(10, self.n_documents // 4)
         chunks = chunk_documents(
             documents,
-            encoding_function,
-            decoding_function,
+            tokenizer,
             self.token_limit,
-            max_documents=self.n_documents // 8,
+            max_documents=max_docs_per_chunk,
         )
 
         prompts = [topic_creation_prompt(chunk) for chunk in chunks]
-        results = complete_openai_request_parralel(
-            prompts, model=self.model, timeout=30, batch_size=10
-        )
+        results = complete_request(prompts)
         topic_list = list(
             chain(
                 *[
@@ -58,7 +53,7 @@ class GenAIMethod(TopicModelingInterface):
                 
         while len(topic_list) > self.n_topics:
             prompt = topic_elimination_prompt(topic_list)
-            response = complete_openai_request(prompt, model=self.model)
+            response = complete_request(prompt)
             elimated_topics = [topic_list[i].lower() for i in response["topic_pair"]]
             old_topic_list = topic_list[:]
             new_topic = response["new_topic"].lower()
@@ -93,9 +88,7 @@ class GenAIMethod(TopicModelingInterface):
         prompts = [
             topic_classification_prompt(document, topic_list) for document in documents
         ]
-        results = complete_openai_request_parralel(
-            prompts, model=self.model, timeout=30, batch_size=50
-        )
+        results = complete_request(prompts)
 
         topic_assignments = [self.assign_topic(result) for result in results]
         topic_names = [topic_list[i] if i >= 0 else "ERROR_NO_TOPIC" for i in topic_assignments]

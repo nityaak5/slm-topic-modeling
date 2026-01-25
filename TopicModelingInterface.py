@@ -17,6 +17,7 @@ class TopicModelingInterface:
         self.n_runs = config["N_runs"]
         self.n_documents = config["N_documents"]
         self.n_topics = config["N_TOPICS"]
+        # Keep TOKEN_LIMIT config-driven for now; auto-calculation can be added later.
         self.token_limit = config["TOKEN_LIMIT"]
         self.dataset = config["DATASET"]
         self.random_state = config["SEED"]

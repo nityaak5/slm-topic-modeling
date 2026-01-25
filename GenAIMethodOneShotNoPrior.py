@@ -1,12 +1,10 @@
 from TopicModelingInterface import TopicModelingInterface
-import tiktoken
 from genai_functions import (
-    complete_openai_request,
+    complete_request,
     chunk_documents,
+    get_tokenizer,
     topic_creation_prompt,
-    topic_elimination_prompt,
     topic_classification_prompt,
-    complete_openai_request_parralel,
     topic_combination_prompt_noprior,
 )
 from itertools import chain
@@ -15,25 +13,21 @@ import random
 class GenAIMethodOneShotNoPrior(TopicModelingInterface):
     def __init__(self, config):
         super().__init__(config)
-        self.model = config["MODEL"]
 
     def fit_transform(self, documents):
-        enc = tiktoken.encoding_for_model("gpt-3.5-turbo")
-        encoding_function = lambda x: enc.encode(x)
-        decoding_function = lambda x: enc.decode(x)
+        tokenizer = get_tokenizer()
 
+        # Use reasonable max_documents: at least 10 docs per chunk, or 1/4 of total
+        max_docs_per_chunk = max(10, self.n_documents // 4)
         chunks = chunk_documents(
             documents,
-            encoding_function,
-            decoding_function,
+            tokenizer,
             self.token_limit,
-            max_documents=self.n_documents // 8,
+            max_documents=max_docs_per_chunk,
         )
 
         prompts = [topic_creation_prompt(chunk) for chunk in chunks]
-        results = complete_openai_request_parralel(
-            prompts, model=self.model, timeout=30, batch_size=10
-        )
+        results = complete_request(prompts)
         topic_list = list(
             chain(
                 *[
@@ -51,7 +45,7 @@ class GenAIMethodOneShotNoPrior(TopicModelingInterface):
         finished = False
         for _ in range(10):
             try:
-                topic_list = complete_openai_request(prompt)["topics"][: self.n_topics]
+                topic_list = complete_request(prompt)["topics"][: self.n_topics]
                 finished = True
                 break
             except Exception as e:
@@ -68,16 +62,14 @@ class GenAIMethodOneShotNoPrior(TopicModelingInterface):
         prompts = [
             topic_classification_prompt(document, topic_list) for document in documents
         ]
-        results = complete_openai_request_parralel(
-            prompts, model=self.model, timeout=30, batch_size=100
-        )
+        results = complete_request(prompts)
         topic_assignments = [self.assign_topic(result) for result in results]
         for _ in range(10):
             for i in range(len(topic_assignments)):
                 if topic_assignments[i] < 0:
                     print(f"Error in document {i}")
                     # retry with higher temperature
-                    result = complete_openai_request(prompts[i], temperature=0.7)
+                    result = complete_request(prompts[i], temperature=0.7)
                     print(f"Old result: {results[i]}")
                     topic_assignments[i] = self.assign_topic(result)
                     print(f"New result: {result}")
