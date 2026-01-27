@@ -7,8 +7,9 @@
   "DATASET": "NYT",
   "N_FEATURES": 1000,
   "EMBEDDING_MODEL": "all-MiniLM-L6-v2",
-  "VLLM_MODEL": "meta-llama/Llama-2-7b-hf",
+  "VLLM_MODEL": "meta-llama/Llama-2-7b-chat-hf",
   "MODELS_DIR": "models",
   "OUTPUT_DIR": "data_out",
-  "METADATA_PATH": null
+  "METADATA_PATH": null,
+  "SAMPLING_METHOD": "equal"
 }

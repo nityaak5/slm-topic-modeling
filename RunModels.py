@@ -139,14 +139,15 @@ def load_config(config_path="config.json", cli_overrides=None):
             "N_runs": 5,
             "N_documents": 800,
             "N_TOPICS": 50,
-            "TOKEN_LIMIT": null,
+            "TOKEN_LIMIT": None,
             "DATASET": "NYT",
             "N_FEATURES": 1000,
             "EMBEDDING_MODEL": "all-MiniLM-L6-v2",
             "VLLM_MODEL": "meta-llama/Llama-2-7b-chat-hf",
             "MODELS_DIR": "models",
             "OUTPUT_DIR": "data_out",
-            "METADATA_PATH": None
+            "METADATA_PATH": None,
+            "SAMPLING_METHOD": "equal"
         }
     
     # Apply CLI overrides (highest priority)
@@ -287,6 +288,12 @@ Examples:
         type=Path,
         help="Output directory for results (overrides config.json OUTPUT_DIR)"
     )
+    parser.add_argument(
+        "--sampling-method",
+        type=str,
+        choices=["equal", "random"],
+        help="Sampling method: 'equal' (equal per class) or 'random' (random from all) (overrides config.json)"
+    )
     
     # Method selection
     parser.add_argument(
@@ -302,7 +309,7 @@ Examples:
     parser.add_argument(
         "--check-deps",
         action="store_true",
-        help="Check if all dependencies are installed"
+        help="Check dependencies and exit"
     )
     parser.add_argument(
         "--skip-deps-check",
@@ -311,7 +318,7 @@ Examples:
     )
     
     args = parser.parse_args()
-    
+    choices = ["GenAIMethodOneShotNoPrior", "GenAIMethodOneShot", "GenAIMethod", "BERTopicModel", "NMFModel", "LDAGensimModel"]
     # Check dependencies
     if args.check_deps:
         check_requirements_txt(REQUIREMENTS_FILE)
@@ -354,6 +361,8 @@ Examples:
         cli_overrides["VLLM_MODEL"] = args.vllm_model
     if args.output_dir:
         cli_overrides["OUTPUT_DIR"] = str(args.output_dir)
+    if args.sampling_method:
+        cli_overrides["SAMPLING_METHOD"] = args.sampling_method
     
     # Load config
     config = load_config(args.config, cli_overrides)

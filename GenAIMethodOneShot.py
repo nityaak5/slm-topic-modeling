@@ -19,15 +19,18 @@ class GenAIMethodOneShot(TopicModelingInterface):
         
         # Use reasonable max_documents: at least 10 docs per chunk, or 1/4 of total
         max_docs_per_chunk = max(10, self.n_documents // 4)
-        chunks = chunk_documents(
+        chunks, chunk_info = chunk_documents(
             documents,
             tokenizer,
             self.token_limit,
             max_documents=max_docs_per_chunk,
         )
+        
+        # Store chunk info for summary
+        self.chunk_info = chunk_info
 
         prompts = [topic_creation_prompt(chunk) for chunk in chunks]
-        results = complete_request(prompts)
+        results = complete_request(prompts, debug=False)
         topic_list = list(
             chain(
                 *[
@@ -41,43 +44,41 @@ class GenAIMethodOneShot(TopicModelingInterface):
         topic_list = list(set(topic_list))
         
         prompt = topic_combination_prompt(topic_list, self.n_topics)
-        print('starting topic combination')
         finished = False
-        for _ in range(10):
+        for attempt in range(10):
             try:
-                topic_list = complete_request(prompt)["topics"][:self.n_topics]
+                result = complete_request(prompt, debug=False)
+                topic_list = result["topics"][:self.n_topics]
                 finished = True
                 break
             except Exception as e:
                 random.shuffle(topic_list)
                 prompt = topic_combination_prompt(topic_list, self.n_topics)
-                print(e)
-                print('retrying')
                 continue
             
         if not finished:
-            print('something went wrong')
+            print('Error: Failed to generate topics after 10 attempts')
             exit(1)
             
-        print('finished topic combination')
         self.n_topics = len(topic_list)
         prompts = [
             topic_classification_prompt(document, topic_list) for document in documents
         ]
-        results = complete_request(prompts)
+        results = complete_request(prompts, debug=False)
         topic_assignments = [self.assign_topic(result) for result in results]
         for _ in range(10):
             for i in range(len(topic_assignments)):
                 if topic_assignments[i] < 0:
-                    print(f"Error in document {i}")
                     # retry with higher temperature
-                    result = complete_request(prompts[i], temperature=0.7)
-                    print(f"Old result: {results[i]}")
+                    result = complete_request(prompts[i], temperature=0.7, strict=False)
                     topic_assignments[i] = self.assign_topic(result)
-                    print(f"New result: {result}")
             if all([x >= 0 for x in topic_assignments]):
                 break        
         topic_names = [topic_list[i] if i >= 0 else "ERROR_NO_TOPIC" for i in topic_assignments]
+        
+        # Store topics for summary
+        self.final_topics = topic_list
+        
         return topic_assignments, topic_names, self.n_topics
 
     def assign_topic(self, result):

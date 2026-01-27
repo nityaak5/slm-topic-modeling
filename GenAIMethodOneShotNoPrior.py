@@ -19,12 +19,15 @@ class GenAIMethodOneShotNoPrior(TopicModelingInterface):
 
         # Use reasonable max_documents: at least 10 docs per chunk, or 1/4 of total
         max_docs_per_chunk = max(10, self.n_documents // 4)
-        chunks = chunk_documents(
+        chunks, chunk_info = chunk_documents(
             documents,
             tokenizer,
             self.token_limit,
             max_documents=max_docs_per_chunk,
         )
+        
+        # Store chunk info for summary
+        self.chunk_info = chunk_info
 
         prompts = [topic_creation_prompt(chunk) for chunk in chunks]
         results = complete_request(prompts)
@@ -69,7 +72,7 @@ class GenAIMethodOneShotNoPrior(TopicModelingInterface):
                 if topic_assignments[i] < 0:
                     print(f"Error in document {i}")
                     # retry with higher temperature
-                    result = complete_request(prompts[i], temperature=0.7)
+                    result = complete_request(prompts[i], temperature=0.7, strict=False)
                     print(f"Old result: {results[i]}")
                     topic_assignments[i] = self.assign_topic(result)
                     print(f"New result: {result}")
@@ -78,6 +81,10 @@ class GenAIMethodOneShotNoPrior(TopicModelingInterface):
         topic_names = [
             topic_list[i] if i >= 0 else "ERROR_NO_TOPIC" for i in topic_assignments
         ]
+        
+        # Store topics for summary
+        self.final_topics = topic_list
+        
         return topic_assignments, topic_names, self.n_topics
 
     def assign_topic(self, result):

@@ -21,12 +21,15 @@ class GenAIMethod(TopicModelingInterface):
         
         # Use reasonable max_documents: at least 10 docs per chunk, or 1/4 of total
         max_docs_per_chunk = max(10, self.n_documents // 4)
-        chunks = chunk_documents(
+        chunks, chunk_info = chunk_documents(
             documents,
             tokenizer,
             self.token_limit,
             max_documents=max_docs_per_chunk,
         )
+        
+        # Store chunk info for summary
+        self.chunk_info = chunk_info
 
         prompts = [topic_creation_prompt(chunk) for chunk in chunks]
         results = complete_request(prompts)
@@ -92,6 +95,10 @@ class GenAIMethod(TopicModelingInterface):
 
         topic_assignments = [self.assign_topic(result) for result in results]
         topic_names = [topic_list[i] if i >= 0 else "ERROR_NO_TOPIC" for i in topic_assignments]
+        
+        # Store topics for summary
+        self.final_topics = topic_list
+        
         return topic_assignments, topic_names, self.n_topics
 
     def assign_topic(self, result):
