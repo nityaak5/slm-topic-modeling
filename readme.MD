@@ -1,11 +1,11 @@
-### Code for the experiments of Generative AI for Small Dataset Topic Modeling
+### Code for the experiments 
 
 Multiple topic modeling techniques are tested on datasets outside of GPT-4o's knowledge cutoff.
 Each technique implements `TopicModelingInterface`. `GenAIMethod` is a computationally more expensive
 strategy where a set of candidate topics is iteratively reduced. We disregarded this technique for the simpler
 `GenAiMethodOneShot`, which is described as `TopicGen` in the paper.
 
-To install, run `pip install -r requirements.txt`. 
+To install, run `uv pip install -r requirements.txt`. 
 
 **Important:** This codebase requires Python 3.10 or higher due to vLLM dependency requirements.
 
@@ -74,27 +74,4 @@ python RunModels.py --check-deps
 python RunModels.py --help
 ```
 
-### Configuration
 
-Configuration is loaded from `config.json` by default. CLI arguments override config.json values.
-
-### HPC Usage
-
-On HPC systems, use the same command. The script automatically:
-- Checks dependencies
-- Creates metadata for CSV datasets
-- Uses configuration from `config.json` or CLI arguments
-
-Example HPC job script:
-```bash
-#!/bin/bash
-#SBATCH --job-name=topic_modeling
-#SBATCH --gres=gpu:1
-#SBATCH --cpus-per-task=8
-#SBATCH --mem=32G
-
-module load python/3.12 cuda/11.8
-source venv/bin/activate
-
-python RunModels.py --dataset-csv /path/to/data.csv --text-column text
-```

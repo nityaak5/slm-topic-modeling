@@ -3,13 +3,16 @@
   "N_runs": 5,
   "N_documents": 800,
   "N_TOPICS": 50,
-  "TOKEN_LIMIT": 2048,
+  "TOKEN_LIMIT": 6000,
   "DATASET": "NYT",
   "N_FEATURES": 1000,
   "EMBEDDING_MODEL": "all-MiniLM-L6-v2",
+  "LLM_BACKEND": "vllm",
   "VLLM_MODEL": "meta-llama/Llama-2-7b-chat-hf",
+  "OPENAI_MODEL": "gpt-4o",
   "MODELS_DIR": "models",
   "OUTPUT_DIR": "data_out",
   "METADATA_PATH": null,
-  "SAMPLING_METHOD": "equal"
+  "SAMPLING_METHOD": "equal",
+  "CARBON_TRACKING": true
 }

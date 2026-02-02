@@ -13,6 +13,9 @@ import sys
 from pathlib import Path
 from typing import Optional
 from packaging.requirements import Requirement
+from dotenv import load_dotenv
+
+load_dotenv()
 
 from BERTopicModel import BERTopicModel
 from GenAIMethodOneShot import GenAIMethodOneShot
@@ -98,7 +101,7 @@ def process_dataset(dataset_path: Path, out_dir: Path, text_column: str, categor
     num_docs = len(df)
 
     # Print dataset info
-    print(f"✓ Loaded dataset: {dataset_path}")
+    print(f" Loaded dataset: {dataset_path}")
     print(f"  Number of documents: {num_docs}")
     print(f"  Text column: {text_column}")
     if category_column:
@@ -143,7 +146,9 @@ def load_config(config_path="config.json", cli_overrides=None):
             "DATASET": "NYT",
             "N_FEATURES": 1000,
             "EMBEDDING_MODEL": "all-MiniLM-L6-v2",
+            "LLM_BACKEND": "vllm",
             "VLLM_MODEL": "meta-llama/Llama-2-7b-chat-hf",
+            "OPENAI_MODEL": "gpt-3.5-turbo",
             "MODELS_DIR": "models",
             "OUTPUT_DIR": "data_out",
             "METADATA_PATH": None,
@@ -156,10 +161,18 @@ def load_config(config_path="config.json", cli_overrides=None):
     # Override with environment variables if set
     if "VLLM_MODEL" in os.environ:
         config["VLLM_MODEL"] = os.environ["VLLM_MODEL"]
+    if "LLM_BACKEND" in os.environ:
+        config["LLM_BACKEND"] = os.environ["LLM_BACKEND"]
+    if "OPENAI_MODEL" in os.environ:
+        config["OPENAI_MODEL"] = os.environ["OPENAI_MODEL"]
     
-    # Set VLLM_MODEL environment variable for genai_functions
+    # Set environment variables for genai_functions
     if "VLLM_MODEL" in config:
         os.environ["VLLM_MODEL"] = config["VLLM_MODEL"]
+    if "LLM_BACKEND" in config:
+        os.environ["LLM_BACKEND"] = config["LLM_BACKEND"]
+    if "OPENAI_MODEL" in config:
+        os.environ["OPENAI_MODEL"] = config["OPENAI_MODEL"]
     
     return config
 
@@ -294,6 +307,17 @@ Examples:
         choices=["equal", "random"],
         help="Sampling method: 'equal' (equal per class) or 'random' (random from all) (overrides config.json)"
     )
+    parser.add_argument(
+        "--llm-backend",
+        type=str,
+        choices=["vllm", "openai"],
+        help="LLM backend: 'vllm' (local GPU) or 'openai' (API) (overrides config.json)"
+    )
+    parser.add_argument(
+        "--openai-model",
+        type=str,
+        help="OpenAI model (e.g. gpt-3.5-turbo, gpt-4o) (overrides config.json)"
+    )
     
     # Method selection
     parser.add_argument(
@@ -363,6 +387,10 @@ Examples:
         cli_overrides["OUTPUT_DIR"] = str(args.output_dir)
     if args.sampling_method:
         cli_overrides["SAMPLING_METHOD"] = args.sampling_method
+    if args.llm_backend:
+        cli_overrides["LLM_BACKEND"] = args.llm_backend
+    if args.openai_model:
+        cli_overrides["OPENAI_MODEL"] = args.openai_model
     
     # Load config
     config = load_config(args.config, cli_overrides)

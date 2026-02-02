@@ -2,7 +2,7 @@ from TopicModelingInterface import TopicModelingInterface
 from genai_functions import (
     complete_request,
     chunk_documents,
-    get_tokenizer,
+    get_tokenizer_for_chunking,
     topic_creation_prompt,
     topic_classification_prompt,
     topic_combination_prompt_noprior,
@@ -15,7 +15,7 @@ class GenAIMethodOneShotNoPrior(TopicModelingInterface):
         super().__init__(config)
 
     def fit_transform(self, documents):
-        tokenizer = get_tokenizer()
+        tokenizer = get_tokenizer_for_chunking()
 
         # Use reasonable max_documents: at least 10 docs per chunk, or 1/4 of total
         max_docs_per_chunk = max(10, self.n_documents // 4)
