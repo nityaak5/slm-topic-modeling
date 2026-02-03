@@ -11,8 +11,6 @@ To install, run `uv pip install -r requirements.txt`.
 
 This codebase uses vLLM for offline LLM inference. All inference runs locally and offline - no API keys or external services required.
 
-**Note**: vLLM requires a GPU with CUDA. It does not work on CPU-only systems.
-
 ## Configuration
 
 Configuration is managed via `config.json`. Key settings include:
