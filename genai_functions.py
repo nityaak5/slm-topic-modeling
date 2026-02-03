@@ -71,9 +71,13 @@ def get_llm():
         # Prepare LLM kwargs
         llm_kwargs = {
             "enforce_eager": True,
-            # "max_model_len": 4096
+            "max_model_len": 65536,
             # "gpu_memory_utilization" : 0.6
         }
+        # Multi-GPU: set VLLM_TENSOR_PARALLEL_SIZE=2 when using e.g. srun --gres=gpu:2
+        tp = os.getenv("VLLM_TENSOR_PARALLEL_SIZE")
+        if tp is not None:
+            llm_kwargs["tensor_parallel_size"] = int(tp)
         # For Mac CPU, don't set gpu_memory_utilization (it's GPU-only)
         # On HPC with GPU, set gpu_memory_utilization
         # if not _is_mac:
@@ -623,8 +627,9 @@ def complete_openai_request_parralel(
     return responses
 
 
-def get_model_limits(token_limit=None):
-    """Get model limits information. Works for both vLLM and OpenAI backends (does not load vLLM when backend is openai)."""
+def get_model_limits(token_limit=None, require_llm=True, model_name_for_summary=None):
+    """Get model limits information. When require_llm=False (e.g. BERTopic/NMF/LDA), returns a stub without loading the LLM.
+    model_name_for_summary: used as model_name in the returned dict when require_llm=False (e.g. embedding model or method tag)."""
     llm_backend = os.getenv("LLM_BACKEND", "vllm").lower()
     token_limit_val = int(token_limit) if token_limit is not None else (int(os.getenv("TOKEN_LIMIT")) if os.getenv("TOKEN_LIMIT") else None)
 
@@ -654,7 +659,16 @@ def get_model_limits(token_limit=None):
             "max_tokens_generation": 2000
         }
 
-    # vLLM path
+    # vLLM path (skip loading LLM when not needed; use caller's tag for summary)
+    if not require_llm:
+        model_name = model_name_for_summary if model_name_for_summary else os.getenv("VLLM_MODEL", "meta-llama/Llama-2-7b-chat-hf")
+        return {
+            "model_name": model_name,
+            "native_max_context_length": None,
+            "configured_max_model_len": None,
+            "token_limit_chunking": token_limit_val,
+            "max_tokens_generation": 2000
+        }
     try:
         llm = get_llm()
         model_config = llm.llm_engine.model_config

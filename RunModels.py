@@ -148,6 +148,7 @@ def load_config(config_path="config.json", cli_overrides=None):
             "EMBEDDING_MODEL": "all-MiniLM-L6-v2",
             "LLM_BACKEND": "vllm",
             "VLLM_MODEL": "meta-llama/Llama-2-7b-chat-hf",
+            "VLLM_TENSOR_PARALLEL_SIZE": None,
             "OPENAI_MODEL": "gpt-3.5-turbo",
             "MODELS_DIR": "models",
             "OUTPUT_DIR": "data_out",
@@ -165,6 +166,8 @@ def load_config(config_path="config.json", cli_overrides=None):
         config["LLM_BACKEND"] = os.environ["LLM_BACKEND"]
     if "OPENAI_MODEL" in os.environ:
         config["OPENAI_MODEL"] = os.environ["OPENAI_MODEL"]
+    if "VLLM_TENSOR_PARALLEL_SIZE" in os.environ:
+        config["VLLM_TENSOR_PARALLEL_SIZE"] = int(os.environ["VLLM_TENSOR_PARALLEL_SIZE"])
     
     # Set environment variables for genai_functions
     if "VLLM_MODEL" in config:
@@ -173,6 +176,8 @@ def load_config(config_path="config.json", cli_overrides=None):
         os.environ["LLM_BACKEND"] = config["LLM_BACKEND"]
     if "OPENAI_MODEL" in config:
         os.environ["OPENAI_MODEL"] = config["OPENAI_MODEL"]
+    if config.get("VLLM_TENSOR_PARALLEL_SIZE") is not None:
+        os.environ["VLLM_TENSOR_PARALLEL_SIZE"] = str(config["VLLM_TENSOR_PARALLEL_SIZE"])
     
     return config
 
@@ -297,6 +302,12 @@ Examples:
         help="vLLM model identifier (overrides config.json)"
     )
     parser.add_argument(
+        "--vllm-tensor-parallel-size",
+        type=int,
+        metavar="N",
+        help="Number of GPUs for vLLM tensor parallelism (e.g. 2 when using --gres=gpu:2)"
+    )
+    parser.add_argument(
         "--output-dir",
         type=Path,
         help="Output directory for results (overrides config.json OUTPUT_DIR)"
@@ -383,6 +394,8 @@ Examples:
         cli_overrides["SEED"] = args.seed
     if args.vllm_model:
         cli_overrides["VLLM_MODEL"] = args.vllm_model
+    if args.vllm_tensor_parallel_size is not None:
+        cli_overrides["VLLM_TENSOR_PARALLEL_SIZE"] = args.vllm_tensor_parallel_size
     if args.output_dir:
         cli_overrides["OUTPUT_DIR"] = str(args.output_dir)
     if args.sampling_method:

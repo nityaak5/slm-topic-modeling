@@ -3,9 +3,15 @@ from sklearn.decomposition import NMF
 from sklearn.feature_extraction.text import TfidfVectorizer
 import numpy as np
 
+
 class NMFModel(TopicModelingInterface):
+    uses_llm = False
+
     def __init__(self, config):
         super().__init__(config)
+
+    def _get_model_tag(self):
+        return "nmf"
 
     def fit_transform(self, documents):
         # Train the NMF model

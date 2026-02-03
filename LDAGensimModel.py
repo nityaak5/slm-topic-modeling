@@ -6,7 +6,10 @@ from gensim.models.phrases import Phrases, Phraser
 from nltk.stem import WordNetLemmatizer
 from TopicModelingInterface import TopicModelingInterface
 
+
 class LDAGensimModel(TopicModelingInterface):
+    uses_llm = False
+
     def __init__(self, config):
         super().__init__(config)
         self.dictionary = None
@@ -14,6 +17,9 @@ class LDAGensimModel(TopicModelingInterface):
         self.bigram = None
         self.trigram = None
         self.lemmatizer = WordNetLemmatizer()
+
+    def _get_model_tag(self):
+        return "lda"
 
     def preprocess(self, texts):
         # Tokenize

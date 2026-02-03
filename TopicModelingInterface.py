@@ -14,6 +14,9 @@ from Datasets import get_nyt, get_arxiv, get_pubmed, get_dataset_from_metadata
 
 
 class TopicModelingInterface:
+    # Subclasses that do not use an LLM (BERTopic, NMF, LDA) set this to False
+    uses_llm = True
+
     def __init__(self, config):
         self.config = config
         self.seed = config["SEED"]
@@ -29,13 +32,17 @@ class TopicModelingInterface:
         # Carbon tracking (vLLM only): track GPU energy/CO2 via carbontracker when True
         self.carbon_tracking = config.get("CARBON_TRACKING", True)
         self.co2_per_km_g = float(config.get("CO2_PER_KM_G", 120.0))
-        # Short, filesystem-safe model name for output filenames
-        backend = config.get("LLM_BACKEND", "vllm")
+        # Short, filesystem-safe model name for output filenames (subclasses override _get_model_tag if needed)
+        self.model_tag = self._get_model_tag()
+
+    def _get_model_tag(self):
+        """Return a short tag for run folders. Override in subclasses that don't use an LLM."""
+        backend = self.config.get("LLM_BACKEND", "vllm")
         if backend == "openai":
-            model_name = config.get("OPENAI_MODEL", "gpt-3.5-turbo")
+            model_name = self.config.get("OPENAI_MODEL", "gpt-3.5-turbo")
         else:
-            model_name = config.get("VLLM_MODEL", "meta-llama/Llama-2-7b-chat-hf")
-        self.model_tag = model_name.split("/")[-1].replace(":", "-") if "/" in model_name else model_name.replace(":", "-")
+            model_name = self.config.get("VLLM_MODEL", "meta-llama/Llama-2-7b-chat-hf")
+        return model_name.split("/")[-1].replace(":", "-") if "/" in model_name else model_name.replace(":", "-")
 
     def preprocess_documents(self, documents):
         raise NotImplementedError
@@ -285,10 +292,15 @@ class TopicModelingInterface:
                     "llm_assigned_topic": topic_names[i]
                 })
 
-        # Single summary and all outputs in run_folder
+        # Single summary and all outputs in run_folder (don't load LLM for non-LLM methods)
+        use_llm = getattr(self.__class__, "uses_llm", True)
         try:
             from genai_functions import get_model_limits
-            model_limits = get_model_limits(token_limit=self.token_limit)
+            model_limits = get_model_limits(
+                token_limit=self.token_limit,
+                require_llm=use_llm,
+                model_name_for_summary=self.model_tag if not use_llm else None,
+            )
         except Exception:
             backend = self.config.get("LLM_BACKEND", "vllm")
             model_name = self.config.get("OPENAI_MODEL", "gpt-3.5-turbo") if backend == "openai" else self.config.get("VLLM_MODEL", "meta-llama/Llama-2-7b-chat-hf")

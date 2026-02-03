@@ -74,7 +74,7 @@ class GenAIMethodOneShot(TopicModelingInterface):
                     topic_assignments[i] = self.assign_topic(result)
             if all([x >= 0 for x in topic_assignments]):
                 break        
-        topic_names = [topic_list[i] if i >= 0 else "ERROR_NO_TOPIC" for i in topic_assignments]
+        topic_names = [topic_list[int(i)] if i >= 0 else "ERROR_NO_TOPIC" for i in topic_assignments]
         
         # Store topics for summary
         self.final_topics = topic_list
@@ -86,7 +86,10 @@ class GenAIMethodOneShot(TopicModelingInterface):
             return -3
         if "topic" not in result:
             return -2
-        if result["topic"] not in range(self.n_topics):
+        try:
+            idx = int(result["topic"])
+        except (TypeError, ValueError):
             return -1
-        
-        return result["topic"]
+        if idx not in range(self.n_topics):
+            return -1
+        return idx
