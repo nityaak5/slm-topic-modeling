@@ -520,8 +520,11 @@ def complete_openai_request(prompt, model="gpt-4o", timeout=30, temperature=0):
             "completion_tokens": getattr(response.usage, "completion_tokens", 0),
             "total_tokens": getattr(response.usage, "total_tokens", 0),
         })
-    json_string = response.choices[0].message.content
-    json_dict = json.loads(json_string)
+    raw_content = response.choices[0].message.content or ""
+    json_dict = _parse_json_response(raw_content, strict=False)
+    if json_dict is None and raw_content.strip():
+        # API returned something but we couldn't parse JSON (e.g. error message)
+        raise ValueError(f"OpenAI model returned non-JSON content: {raw_content[:500]!r}")
     return json_dict
 
 
@@ -537,9 +540,10 @@ async def complete_openai_request_http(session, prompt, model, timeout):
             {"role": "system", "content": "You are a helpful assistant designed to output JSON."},
             {"role": "user", "content": prompt},
         ],
-        "temperature": 0,
         "max_completion_tokens": 2_000,
     }
+    if not _is_gpt5_model(model):
+        data["temperature"] = 0
     timeout_obj = aiohttp.ClientTimeout(total=timeout)
     async with session.post(
         "https://api.openai.com/v1/chat/completions",
@@ -570,11 +574,12 @@ async def complete_openai_request_http_logprobs(session, prompt, model, timeout)
             {"role": "system", "content": "You are a helpful assistant designed to output JSON."},
             {"role": "user", "content": prompt},
         ],
-        "temperature": 0,
         "max_completion_tokens": 2_000,
         "logprobs": True,
         "top_logprobs": 20,
     }
+    if not _is_gpt5_model(model):
+        data["temperature"] = 0
     timeout_obj = aiohttp.ClientTimeout(total=timeout)
     async with session.post(
         "https://api.openai.com/v1/chat/completions",
