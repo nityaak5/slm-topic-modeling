@@ -1,15 +1,10 @@
-### Code for the experiments 
+### Code for the experiments, from : https://github.com/ICascha/topic_modeling_paper
 
-Multiple topic modeling techniques are tested on datasets outside of GPT-4o's knowledge cutoff.
-Each technique implements `TopicModelingInterface`. `GenAIMethod` is a computationally more expensive
-strategy where a set of candidate topics is iteratively reduced. We disregarded this technique for the simpler
-`GenAiMethodOneShot`, which is described as `TopicGen` in the paper.
+In the results, each technique implements `TopicModelingInterface`. `GenAIMethodoneShot` 
 
 To install, run `uv pip install -r requirements.txt`. 
 
 **Important:** This codebase requires Python 3.10 or higher due to vLLM dependency requirements.
-
-This codebase uses vLLM for offline LLM inference. All inference runs locally and offline - no API keys or external services required.
 
 ## Configuration
 
@@ -56,13 +51,11 @@ The script will:
 ### CLI Options
 
 ```bash
-# Override config values
-python RunModels.py --dataset NYT --n-topics 30 --n-documents 400
+# Override config values using --set KEY=VALUE
+python RunModels.py --dataset NYT --set N_TOPICS=30 --set N_documents=400
 
-# Use specific method
+# Use specific method (or multiple methods)
 python RunModels.py --dataset NYT --method-type GenAIMethodOneShot
-
-# Multiple methods
 python RunModels.py --dataset NYT --method-type GenAIMethodOneShot BERTopicModel
 
 # Check dependencies
