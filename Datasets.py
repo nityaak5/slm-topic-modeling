@@ -1,28 +1,25 @@
-import json
 import pandas as pd
 from pathlib import Path
+from typing import Optional
 
 
 class GenericDataset:
-    """Generic dataset class that loads from metadata.json."""
-    def __init__(self, metadata_path: Path):
-        with open(metadata_path, 'r') as f:
-            metadata = json.load(f)
-        
-        dataset_path = Path(metadata['dataset_path'])
+    """Generic dataset loaded from a CSV path and column names (no metadata file)."""
+    def __init__(
+        self,
+        dataset_path: Path,
+        text_column: str,
+        category_column: Optional[str] = None,
+    ):
         self.df = pd.read_csv(dataset_path)
-        self.data = self.df[metadata['text_column']].tolist()
-        
-        # Handle category column if present
-        if 'category_column' in metadata and metadata['category_column']:
-            category_col = metadata['category_column']
-            idx_mapping = {x: i for i, x in enumerate(self.df[category_col].unique())}
-            self.target = [idx_mapping[x] for x in self.df[category_col]]
-            self.target_names = {i: x for i, x in enumerate(self.df[category_col].unique())}
+        self.data = self.df[text_column].tolist()
+        if category_column and category_column in self.df.columns:
+            idx_mapping = {x: i for i, x in enumerate(self.df[category_column].unique())}
+            self.target = [idx_mapping[x] for x in self.df[category_column]]
+            self.target_names = {i: x for i, x in enumerate(self.df[category_column].unique())}
         else:
-            # No category column - create dummy targets (all 0)
             self.target = [0] * len(self.data)
-            self.target_names = {0: 'unknown'}
+            self.target_names = {0: "unknown"}
 
 
 class NYTDataset:
@@ -60,9 +57,17 @@ def get_pubmed():
     return PubmedDataset()
 
 
-def get_dataset_from_metadata(metadata_path: Path):
-    """Load dataset from metadata.json file."""
-    return GenericDataset(metadata_path)
+def get_dataset_from_csv(
+    dataset_path: Path,
+    text_column: str,
+    category_column: Optional[str] = None,
+):
+    """Load dataset from CSV path and column names."""
+    return GenericDataset(
+        Path(dataset_path),
+        text_column,
+        category_column,
+    )
 
 
 if __name__ == '__main__':

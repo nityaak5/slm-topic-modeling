@@ -17,8 +17,8 @@ class GenAIMethodOneShot(TopicModelingInterface):
     def fit_transform(self, documents):
         tokenizer = get_tokenizer_for_chunking()
         
-        # Use reasonable max_documents: at least 10 docs per chunk, or 1/4 of total
-        max_docs_per_chunk = max(10, self.n_documents // 4)
+        # Use reasonable max_documents: at least 10 docs per chunk, or 1/8 of total
+        max_docs_per_chunk = max(10, self.n_documents // 8)
         chunks, chunk_info = chunk_documents(
             documents,
             tokenizer,

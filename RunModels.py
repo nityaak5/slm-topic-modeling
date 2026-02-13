@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """Unified entry point for running topic modeling experiments.
 
-Supports both predefined datasets (NYT, ARXIV, PUBMED) and custom CSV datasets.
-For custom datasets, automatically creates metadata.json and uses GENERIC mode.
+Default config is config.json. Override any key with --set KEY=VALUE (int/bool keys are coerced).
+Supports predefined datasets (NYT, ARXIV, PUBMED, NEWSGROUPS) and custom CSV via --dataset-csv with --text-column (and optional --category-column).
 """
 
 import argparse
@@ -26,6 +26,43 @@ from LDAGensimModel import LDAGensimModel
 
 
 REQUIREMENTS_FILE = Path(__file__).with_name("requirements.txt")
+
+# Keys that expect integer or boolean in config (for --set coercion); rest are str
+CONFIG_INT_KEYS = frozenset({
+    "SEED", "N_runs", "N_documents", "N_TOPICS", "N_FEATURES", "TOKEN_LIMIT",
+    "VLLM_TENSOR_PARALLEL_SIZE", "VLLM_MAX_MODEL_LEN",
+})
+CONFIG_BOOL_KEYS = frozenset({"CARBON_TRACKING", "VLLM_ENFORCE_EAGER"})
+
+
+def _coerce_set_value(key: str, value: str):
+    """Coerce a string value for --set KEY=VALUE to the type expected by config."""
+    if key in CONFIG_INT_KEYS:
+        return int(value)
+    if key in CONFIG_BOOL_KEYS:
+        return value.lower() in ("1", "true", "yes")
+    return value
+
+
+def parse_set_overrides(set_args: Optional[list[str]]) -> dict:
+    """Parse --set KEY=VALUE into a config override dict. Exits on malformed items."""
+    overrides = {}
+    for item in set_args or []:
+        if "=" not in item:
+            print(f"ERROR: --set requires KEY=VALUE, got: {item!r}")
+            sys.exit(1)
+        key, value = item.split("=", 1)
+        key = key.strip()
+        value = value.strip()
+        if not key:
+            print(f"ERROR: Empty key in --set: {item!r}")
+            sys.exit(1)
+        try:
+            overrides[key] = _coerce_set_value(key, value)
+        except ValueError as e:
+            print(f"ERROR: --set {key}={value!r}: {e}")
+            sys.exit(1)
+    return overrides
 
 
 def check_requirements_txt(requirements_path: Path) -> None:
@@ -66,119 +103,60 @@ def check_requirements_txt(requirements_path: Path) -> None:
         print("  pip install -r requirements.txt")
 
 
-def process_dataset(dataset_path: Path, out_dir: Path, text_column: str, category_column: Optional[str] = None) -> Path:
-    """Load CSV dataset, perform sanity check, and write metadata.json.
-    
-    Returns:
-        Path to the created metadata.json file
-    """
+def validate_csv_dataset(
+    dataset_path: Path,
+    text_column: str,
+    category_column: Optional[str] = None,
+) -> None:
+    """Validate CSV dataset and column names. Exits on error."""
     import pandas as pd
-    
-    # Verify dataset file exists
+
     if not dataset_path.exists():
         print(f"ERROR: Dataset file not found: {dataset_path}")
         sys.exit(1)
-
-    # Load dataset
     try:
         df = pd.read_csv(dataset_path)
     except Exception as e:
         print(f"ERROR: Failed to load dataset: {e}")
         sys.exit(1)
-
-    # Verify text column exists
     if text_column not in df.columns:
         print(f"ERROR: Text column '{text_column}' not found in dataset.")
         print(f"Available columns: {', '.join(df.columns.tolist())}")
         sys.exit(1)
-
-    # Verify category column exists if provided
     if category_column is not None and category_column not in df.columns:
         print(f"ERROR: Category column '{category_column}' not found in dataset.")
         print(f"Available columns: {', '.join(df.columns.tolist())}")
         sys.exit(1)
-
     num_docs = len(df)
-
-    # Print dataset info
     print(f" Loaded dataset: {dataset_path}")
     print(f"  Number of documents: {num_docs}")
     print(f"  Text column: {text_column}")
     if category_column:
         print(f"  Category column: {category_column}")
 
-    # Create output directory
-    out_dir.mkdir(parents=True, exist_ok=True)
-
-    # Write metadata.json
-    metadata = {
-        "dataset_path": str(dataset_path.resolve()),
-        "number_of_documents": num_docs,
-        "text_column": text_column,
-    }
-    if category_column:
-        metadata["category_column"] = category_column
-    
-    metadata_path = out_dir / "metadata.json"
-    with open(metadata_path, "w") as f:
-        json.dump(metadata, f, indent=2)
-    
-    print(f"Created metadata: {metadata_path}")
-    return metadata_path
-
 
 def load_config(config_path="config.json", cli_overrides=None):
-    """Load configuration from JSON file, with CLI overrides."""
+    """Load configuration. Defaults from config.json; overrides from CLI (--set, --output-dir, dataset)."""
     config_file = Path(config_path)
     cli_overrides = cli_overrides or {}
-    
-    if config_file.exists():
-        with open(config_file, 'r') as f:
-            config = json.load(f)
-    else:
-        # Default config if file doesn't exist
-        config = {
-            "SEED": 44,
-            "N_runs": 5,
-            "N_documents": 800,
-            "N_TOPICS": 50,
-            "TOKEN_LIMIT": None,
-            "DATASET": "NYT",
-            "N_FEATURES": 1000,
-            "EMBEDDING_MODEL": "all-MiniLM-L6-v2",
-            "LLM_BACKEND": "vllm",
-            "VLLM_MODEL": "meta-llama/Llama-2-7b-chat-hf",
-            "VLLM_TENSOR_PARALLEL_SIZE": None,
-            "OPENAI_MODEL": "gpt-3.5-turbo",
-            "MODELS_DIR": "models",
-            "OUTPUT_DIR": "data_out",
-            "METADATA_PATH": None,
-            "SAMPLING_METHOD": "equal"
-        }
-    
-    # Apply CLI overrides (highest priority)
+
+    if not config_file.exists():
+        print(f"ERROR: Config file not found: {config_file}")
+        print("  Default config is defined in config.json. Create it or pass --config /path/to/config.json")
+        sys.exit(1)
+    with open(config_file) as f:
+        config = json.load(f)
+
+    # Apply CLI overrides (user overrides defaults from config file)
     config.update(cli_overrides)
-    
-    # Override with environment variables if set
-    if "VLLM_MODEL" in os.environ:
-        config["VLLM_MODEL"] = os.environ["VLLM_MODEL"]
-    if "LLM_BACKEND" in os.environ:
-        config["LLM_BACKEND"] = os.environ["LLM_BACKEND"]
-    if "OPENAI_MODEL" in os.environ:
-        config["OPENAI_MODEL"] = os.environ["OPENAI_MODEL"]
-    if "VLLM_TENSOR_PARALLEL_SIZE" in os.environ:
-        config["VLLM_TENSOR_PARALLEL_SIZE"] = int(os.environ["VLLM_TENSOR_PARALLEL_SIZE"])
-    
-    # Set environment variables for genai_functions
-    if "VLLM_MODEL" in config:
-        os.environ["VLLM_MODEL"] = config["VLLM_MODEL"]
-    if "LLM_BACKEND" in config:
-        os.environ["LLM_BACKEND"] = config["LLM_BACKEND"]
-    if "OPENAI_MODEL" in config:
-        os.environ["OPENAI_MODEL"] = config["OPENAI_MODEL"]
-    if config.get("VLLM_TENSOR_PARALLEL_SIZE") is not None:
-        os.environ["VLLM_TENSOR_PARALLEL_SIZE"] = str(config["VLLM_TENSOR_PARALLEL_SIZE"])
-    
+
+    # Sync all config to env so genai_functions (and any code that reads env) sees config values
+    # Skip None values and keys that shouldn't be in env (e.g. paths that are already resolved)
+    skip_keys = {"METADATA_PATH", "DATASET_CSV_PATH", "TEXT_COLUMN", "CATEGORY_COLUMN"}
+    for key, value in config.items():
+        if key not in skip_keys and value is not None:
+            os.environ[key] = str(value)
+
     return config
 
 
@@ -220,136 +198,91 @@ def main():
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 Examples:
-  # Use predefined dataset (NYT, ARXIV, PUBMED)
+  # Predefined dataset
   python RunModels.py --dataset NYT
-  
-  # Use custom CSV dataset (automatically creates metadata)
+
+  # Custom CSV dataset
   python RunModels.py --dataset-csv data_in/my_data.csv --text-column text --category-column category
-  
-  # Override config values
-  python RunModels.py --dataset NYT --n-topics 30 --n-documents 400
-  
-  # Use specific method
-  python RunModels.py --dataset NYT --method-type GenAIMethodOneShot
+
+  # Override config keys (any key in config.json)
+  python RunModels.py --dataset NYT --set N_TOPICS=30 --set N_documents=400 --set SEED=42
+
+  # Specific method and output dir
+  python RunModels.py --dataset NYT --method-type GenAIMethodOneShot --output-dir results
         """
     )
-    
-    # Dataset options (mutually exclusive)
-    dataset_group = parser.add_mutually_exclusive_group(required=True)
-    dataset_group.add_argument(
+
+    # --- Dataset ---
+    dataset_group = parser.add_argument_group("Dataset (choose one)")
+    mutex = dataset_group.add_mutually_exclusive_group(required=True)
+    mutex.add_argument(
         "--dataset",
         type=str,
         choices=["NYT", "ARXIV", "PUBMED", "NEWSGROUPS"],
-        help="Predefined dataset name"
+        help="Predefined dataset name",
     )
-    dataset_group.add_argument(
+    mutex.add_argument(
         "--dataset-csv",
         type=Path,
-        help="Path to custom CSV dataset file"
+        help="Path to custom CSV dataset file",
     )
-    
-    # Required for CSV datasets
-    parser.add_argument(
+    dataset_group.add_argument(
         "--text-column",
         type=str,
-        help="Name of the text column in CSV (required with --dataset-csv)"
+        help="Text column in CSV (required with --dataset-csv)",
     )
-    parser.add_argument(
+    dataset_group.add_argument(
         "--category-column",
         type=str,
         default=None,
-        help="Name of the category/label column in CSV (optional)"
+        help="Category/label column in CSV (optional)",
     )
-    parser.add_argument(
-        "--metadata-dir",
-        type=Path,
-        default=Path("data_output"),
-        help="Directory to store metadata.json (default: data_output)"
+
+    # --- Config overrides ---
+    overrides_group = parser.add_argument_group(
+        "Config overrides",
+        "Defaults come from config.json. Override any key with --set KEY=VALUE (int/bool keys are coerced).",
     )
-    
-    # Config file
-    parser.add_argument(
+    overrides_group.add_argument(
         "--config",
         type=Path,
         default="config.json",
-        help="Path to config.json file (default: config.json)"
+        help="Path to config file (default: config.json)",
     )
-    
-    # Common overrides
-    parser.add_argument(
-        "--n-topics",
-        type=int,
-        help="Number of topics (overrides config.json)"
-    )
-    parser.add_argument(
-        "--n-documents",
-        type=int,
-        help="Number of documents to process (overrides config.json)"
-    )
-    parser.add_argument(
-        "--n-runs",
-        type=int,
-        help="Number of runs (overrides config.json)"
-    )
-    parser.add_argument(
-        "--seed",
-        type=int,
-        help="Random seed (overrides config.json)"
-    )
-    parser.add_argument(
-        "--vllm-model",
-        type=str,
-        help="vLLM model identifier (overrides config.json)"
-    )
-    parser.add_argument(
-        "--vllm-tensor-parallel-size",
-        type=int,
-        metavar="N",
-        help="Number of GPUs for vLLM tensor parallelism (e.g. 2 when using --gres=gpu:2)"
-    )
-    parser.add_argument(
+    overrides_group.add_argument(
         "--output-dir",
         type=Path,
-        help="Output directory for results (overrides config.json OUTPUT_DIR)"
+        help="Output directory for results (overrides config OUTPUT_DIR)",
     )
-    parser.add_argument(
-        "--sampling-method",
-        type=str,
-        choices=["equal", "random"],
-        help="Sampling method: 'equal' (equal per class) or 'random' (random from all) (overrides config.json)"
+    overrides_group.add_argument(
+        "--set",
+        action="append",
+        metavar="KEY=VALUE",
+        help="Override a config key; repeatable. e.g. --set N_TOPICS=30 --set SEED=42",
     )
-    parser.add_argument(
-        "--llm-backend",
-        type=str,
-        choices=["vllm", "openai"],
-        help="LLM backend: 'vllm' (local GPU) or 'openai' (API) (overrides config.json)"
-    )
-    parser.add_argument(
-        "--openai-model",
-        type=str,
-        help="OpenAI model (e.g. gpt-3.5-turbo, gpt-4o) (overrides config.json)"
-    )
-    
-    # Method selection
-    parser.add_argument(
+
+    # --- Method ---
+    method_group = parser.add_argument_group("Method")
+    method_group.add_argument(
         "--method-type",
         type=str,
         nargs="+",
         choices=["GenAIMethodOneShotNoPrior", "GenAIMethodOneShot", "GenAIMethod", "BERTopicModel", "NMFModel", "LDAGensimModel"],
         default=["GenAIMethodOneShotNoPrior"],
-        help="Topic modeling method(s) to run (default: GenAIMethodOneShotNoPrior)"
+        help="Topic modeling method(s) to run (default: GenAIMethodOneShotNoPrior)",
     )
-    
-    # Options
-    parser.add_argument(
+
+    # --- Options ---
+    options_group = parser.add_argument_group("Options")
+    options_group.add_argument(
         "--check-deps",
         action="store_true",
-        help="Check dependencies and exit"
+        help="Check dependencies and exit",
     )
-    parser.add_argument(
+    options_group.add_argument(
         "--skip-deps-check",
         action="store_true",
-        help="Skip dependency check"
+        help="Skip dependency check",
     )
     
     args = parser.parse_args()
@@ -367,44 +300,24 @@ Examples:
     if args.dataset_csv:
         if not args.text_column:
             parser.error("--text-column is required when using --dataset-csv")
-        
-        # Create metadata automatically
-        metadata_path = process_dataset(
+        validate_csv_dataset(
             args.dataset_csv,
-            args.metadata_dir,
             args.text_column,
-            args.category_column
+            args.category_column,
         )
-        
-        # Set dataset to GENERIC and metadata path
         cli_overrides["DATASET"] = "GENERIC"
-        cli_overrides["METADATA_PATH"] = str(metadata_path.resolve())
+        cli_overrides["DATASET_CSV_PATH"] = str(args.dataset_csv.resolve())
+        cli_overrides["TEXT_COLUMN"] = args.text_column
+        if args.category_column is not None:
+            cli_overrides["CATEGORY_COLUMN"] = args.category_column
     else:
         # Use predefined dataset
         cli_overrides["DATASET"] = args.dataset
     
-    # Apply CLI overrides
-    if args.n_topics:
-        cli_overrides["N_TOPICS"] = args.n_topics
-    if args.n_documents:
-        cli_overrides["N_documents"] = args.n_documents
-    if args.n_runs:
-        cli_overrides["N_runs"] = args.n_runs
-    if args.seed:
-        cli_overrides["SEED"] = args.seed
-    if args.vllm_model:
-        cli_overrides["VLLM_MODEL"] = args.vllm_model
-    if args.vllm_tensor_parallel_size is not None:
-        cli_overrides["VLLM_TENSOR_PARALLEL_SIZE"] = args.vllm_tensor_parallel_size
-    if args.output_dir:
-        cli_overrides["OUTPUT_DIR"] = str(args.output_dir)
-    if args.sampling_method:
-        cli_overrides["SAMPLING_METHOD"] = args.sampling_method
-    if args.llm_backend:
-        cli_overrides["LLM_BACKEND"] = args.llm_backend
-    if args.openai_model:
-        cli_overrides["OPENAI_MODEL"] = args.openai_model
-    
+    cli_overrides.update(parse_set_overrides(args.set))
+    if args.output_dir is not None:
+        cli_overrides["OUTPUT_DIR"] = str(args.output_dir.resolve())
+
     # Load config
     config = load_config(args.config, cli_overrides)
     
@@ -413,7 +326,7 @@ Examples:
     print("Configuration")
     print(f"{'='*60}")
     for key, value in sorted(config.items()):
-        if key == "METADATA_PATH" and value:
+        if key == "DATASET_CSV_PATH" and value:
             print(f"  {key}: {Path(value).name}")
         else:
             print(f"  {key}: {value}")

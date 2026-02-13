@@ -13,17 +13,18 @@ This codebase uses vLLM for offline LLM inference. All inference runs locally an
 
 ## Configuration
 
-Configuration is managed via `config.json`. Key settings include:
+**Defaults** are defined in `config.json`. You can override any key from the command line with `--set KEY=VALUE` (repeatable). Integer and boolean keys are coerced; the rest are strings.
 
-- **VLLM_MODEL**: vLLM model identifier or path (default: `meta-llama/Llama-2-7b-chat-hf`)
-- **N_TOPICS**: Number of topics to extract
-- **N_documents**: Number of documents to process
+Example: `python RunModels.py --dataset NYT --set N_TOPICS=30 --set N_documents=400`
+
+Key settings in `config.json` include:
+
+- **VLLM_MODEL**: vLLM model identifier or path
+- **N_TOPICS**, **N_documents**: Number of topics and documents
 - **TOKEN_LIMIT**: Maximum tokens per request
 - **DATASET**: Dataset name (NYT, ARXIV, PUBMED, etc.)
-- **EMBEDDING_MODEL**: Embedding model for BERTopic (default: `all-MiniLM-L6-v2`)
-- **OUTPUT_DIR**: Directory for output files (coherence scores, topic names). Default: `data_out`
-
-You can override `VLLM_MODEL` via environment variable: `export VLLM_MODEL="your-model-name"`
+- **EMBEDDING_MODEL**: Embedding model for BERTopic
+- **OUTPUT_DIR**: Directory for output files
 
 ## Model Storage
 
@@ -50,8 +51,7 @@ python RunModels.py --dataset-csv data_in/my_data.csv --text-column text --categ
 The script will:
 1. Load your CSV file
 2. Validate columns
-3. Automatically create `metadata.json` in `data_output/`
-4. Run topic modeling with GENERIC dataset mode
+3. Run topic modeling with GENERIC dataset mode (CSV path and column names are passed via config; no metadata file is created)
 
 ### CLI Options
 

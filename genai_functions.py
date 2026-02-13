@@ -18,6 +18,7 @@ from datetime import datetime
 #     os.environ["CUDA_VISIBLE_DEVICES"] = ""
 #     os.environ["VLLM_USE_CPU"] = "1"
 
+#these are set to avoid c complier issues on compute node
 os.environ["VLLM_USE_FLASHINFER_SAMPLER"] = "0"
 os.environ["VLLM_DISABLE_FLASHINFER_PREFILL"] = "1"
 os.environ["VLLM_ATTENTION_BACKEND"] = "TORCH_SDPA"
@@ -68,20 +69,21 @@ def get_llm():
         # Check if model_name is a local path
         model_path = Path(_model_name)
         
-        # Prepare LLM kwargs
+        # All vLLM options come from env (config is synced to env before run in RunModels + TopicModelingInterface.run())
+        max_model_len = int(os.getenv("VLLM_MAX_MODEL_LEN", "4096"))
+        enforce_eager = os.getenv("VLLM_ENFORCE_EAGER", "true").lower() in ("1", "true", "yes")
+        gpu_mem_util = os.getenv("VLLM_GPU_MEMORY_UTILIZATION")
         llm_kwargs = {
-            "enforce_eager": True,
-            "max_model_len": 65536,
-            # "gpu_memory_utilization" : 0.6
+            "enforce_eager": enforce_eager,
+            "max_model_len": max_model_len,
         }
+        if gpu_mem_util is not None:
+            llm_kwargs["gpu_memory_utilization"] = float(gpu_mem_util)
         # Multi-GPU: set VLLM_TENSOR_PARALLEL_SIZE=2 when using e.g. srun --gres=gpu:2
         tp = os.getenv("VLLM_TENSOR_PARALLEL_SIZE")
         if tp is not None:
             llm_kwargs["tensor_parallel_size"] = int(tp)
-        # For Mac CPU, don't set gpu_memory_utilization (it's GPU-only)
-        # On HPC with GPU, set gpu_memory_utilization
-        # if not _is_mac:
-        #     llm_kwargs["gpu_memory_utilization"] = 0.6
+        
         
         # Try as absolute path first
         if model_path.is_absolute() and model_path.exists() and model_path.is_dir():
@@ -428,7 +430,23 @@ def complete_request(
     except Exception as e:
         print(f"Error generating responses with vLLM: {e}")
         return None if not is_list else [None] * len(prompt_list)
-    
+
+    # Accumulate token usage for throughput
+    global _vllm_usage_tracker
+    for output in outputs:
+        prompt_len = len(getattr(output, "prompt_token_ids", []))
+        comp_len = len(getattr(output.outputs[0], "token_ids", [])) if output.outputs else 0
+        _vllm_usage_tracker["prompt_tokens"] += prompt_len
+        _vllm_usage_tracker["completion_tokens"] += comp_len
+    if _vllm_usage_tracker["prompt_tokens"] == 0 and formatted_prompts:
+        try:
+            tok = get_tokenizer()
+            for p in formatted_prompts:
+                _vllm_usage_tracker["prompt_tokens"] += len(tok.encode(p))
+        except Exception:
+            pass
+    _vllm_usage_tracker["total_tokens"] = _vllm_usage_tracker["prompt_tokens"] + _vllm_usage_tracker["completion_tokens"]
+
     results = []
     strict_mode = strict and not is_list
     for i, output in enumerate(outputs):
@@ -465,6 +483,9 @@ def complete_request(
 # Accumulate OpenAI token usage per run (reset by get_openai_usage())
 _openai_usage_tracker = {"prompt_tokens": 0, "completion_tokens": 0, "total_tokens": 0}
 
+# Accumulate vLLM token usage per run (reset by get_vllm_usage())
+_vllm_usage_tracker = {"prompt_tokens": 0, "completion_tokens": 0, "total_tokens": 0}
+
 
 def _add_openai_usage(usage):
     """Add usage dict to tracker. Handles both prompt_tokens/completion_tokens and input_tokens/output_tokens (OpenAI newer API)."""
@@ -485,6 +506,16 @@ def get_openai_usage():
     _openai_usage_tracker["prompt_tokens"] = 0
     _openai_usage_tracker["completion_tokens"] = 0
     _openai_usage_tracker["total_tokens"] = 0
+    return out
+
+
+def get_vllm_usage():
+    """Return current vLLM token usage for this run and reset the tracker (for throughput)."""
+    global _vllm_usage_tracker
+    out = dict(_vllm_usage_tracker)
+    _vllm_usage_tracker["prompt_tokens"] = 0
+    _vllm_usage_tracker["completion_tokens"] = 0
+    _vllm_usage_tracker["total_tokens"] = 0
     return out
 
 

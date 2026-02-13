@@ -10,10 +10,14 @@
   "LLM_BACKEND": "vllm",
   "VLLM_MODEL": "meta-llama/Llama-2-7b-chat-hf",
   "VLLM_TENSOR_PARALLEL_SIZE": null,
+  "VLLM_MAX_MODEL_LEN": 65536,
+  "VLLM_ENFORCE_EAGER": true,
+  "VLLM_GPU_MEMORY_UTILIZATION": null,
   "OPENAI_MODEL": "gpt-4o",
   "MODELS_DIR": "models",
   "OUTPUT_DIR": "data_out",
   "METADATA_PATH": null,
   "SAMPLING_METHOD": "equal",
-  "CARBON_TRACKING": true
+  "CARBON_TRACKING": true,
+  "FILTER_TOKENIZER_MODEL": "gpt-3.5-turbo"
 }

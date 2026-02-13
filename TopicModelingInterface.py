@@ -9,8 +9,9 @@ from sklearn.metrics.cluster import v_measure_score, homogeneity_score, complete
 from collections import defaultdict
 from datetime import datetime
 import json
+import os
 import time
-from Datasets import get_nyt, get_arxiv, get_pubmed, get_dataset_from_metadata
+from Datasets import get_nyt, get_arxiv, get_pubmed, get_dataset_from_csv
 
 
 class TopicModelingInterface:
@@ -107,6 +108,10 @@ class TopicModelingInterface:
         print(f"  Backend: {backend} | Model: {ml.get('model_name', 'N/A')} | "
               f"context: {ml.get('native_max_context_length') or ml.get('configured_max_model_len') or 'N/A'} tokens | "
               f"chunk limit: {ml.get('token_limit_chunking') or 'N/A'}")
+        throughputs = [r.get("throughput_tokens_per_sec") for r in run_results_list if r.get("throughput_tokens_per_sec") is not None]
+        if throughputs:
+            avg_throughput = round(sum(throughputs) / len(throughputs), 2)
+            print(f"  Throughput: {avg_throughput} tokens/sec (avg over {len(throughputs)} run(s))")
 
         return summary_path
 
@@ -116,6 +121,13 @@ class TopicModelingInterface:
             self.carbon_tracking = False
         if not hasattr(self, "co2_per_km_g"):
             self.co2_per_km_g = 120.0
+
+        # Sync all config to env so genai_functions (and any code that reads env) sees config values
+        # Skip None values and keys that shouldn't be in env (e.g. paths that are already resolved)
+        skip_keys = {"METADATA_PATH", "DATASET_CSV_PATH", "TEXT_COLUMN", "CATEGORY_COLUMN"}
+        for key, value in self.config.items():
+            if key not in skip_keys and value is not None:
+                os.environ[key] = str(value)
 
         random.seed(self.seed)
         output_dir = Path(self.config.get("OUTPUT_DIR", "data_out"))
@@ -128,13 +140,18 @@ class TopicModelingInterface:
 
         # --- Load dataset once ---
         if self.dataset == "GENERIC":
-            if "METADATA_PATH" not in self.config:
-                raise ValueError("DATASET='GENERIC' requires METADATA_PATH in config")
-            metadata_path = Path(self.config["METADATA_PATH"])
-            if not metadata_path.exists():
-                raise FileNotFoundError(f"Metadata file not found: {metadata_path}")
-            newsgroups_train = get_dataset_from_metadata(metadata_path)
-            dataset_name = metadata_path.parent.name
+            for key in ("DATASET_CSV_PATH", "TEXT_COLUMN"):
+                if key not in self.config:
+                    raise ValueError(f"DATASET='GENERIC' requires {key} in config")
+            csv_path = Path(self.config["DATASET_CSV_PATH"])
+            if not csv_path.exists():
+                raise FileNotFoundError(f"Dataset CSV not found: {csv_path}")
+            newsgroups_train = get_dataset_from_csv(
+                csv_path,
+                self.config["TEXT_COLUMN"],
+                self.config.get("CATEGORY_COLUMN"),
+            )
+            dataset_name = csv_path.stem
         elif self.dataset == "NYT":
             newsgroups_train = get_nyt()
             dataset_name = "NYT"
@@ -248,12 +265,24 @@ class TopicModelingInterface:
                 gpu_stats["runtime_seconds"] = runtime_seconds
 
             openai_usage = None
+            vllm_usage = None
             if self.config.get("LLM_BACKEND", "vllm").lower() == "openai":
                 try:
                     from genai_functions import get_openai_usage
                     openai_usage = get_openai_usage()
                 except Exception:
                     openai_usage = None
+            else:
+                try:
+                    from genai_functions import get_vllm_usage
+                    vllm_usage = get_vllm_usage()
+                except Exception:
+                    vllm_usage = None
+
+            usage = openai_usage or vllm_usage
+            throughput_tokens_per_sec = None
+            if usage and runtime_seconds > 0 and usage.get("total_tokens"):
+                throughput_tokens_per_sec = round(usage["total_tokens"] / runtime_seconds, 2)
 
             score = v_measure_score(labels, topics)
             score_df.append((counter, "V_measure", score, num_topics))
@@ -280,7 +309,9 @@ class TopicModelingInterface:
                 "chunking_info": chunk_info,
                 "gpu_stats": gpu_stats,
                 "openai_usage": openai_usage,
-                "runtime_seconds": runtime_seconds
+                "vllm_usage": vllm_usage,
+                "runtime_seconds": runtime_seconds,
+                "throughput_tokens_per_sec": throughput_tokens_per_sec,
             })
 
             for i in range(len(documents)):
