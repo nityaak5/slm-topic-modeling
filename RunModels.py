@@ -32,7 +32,7 @@ CONFIG_INT_KEYS = frozenset({
     "SEED", "N_runs", "N_documents", "N_TOPICS", "N_FEATURES", "TOKEN_LIMIT",
     "VLLM_TENSOR_PARALLEL_SIZE", "VLLM_MAX_MODEL_LEN",
 })
-CONFIG_BOOL_KEYS = frozenset({"CARBON_TRACKING", "VLLM_ENFORCE_EAGER"})
+CONFIG_BOOL_KEYS = frozenset({"CARBON_TRACKING", "VLLM_ENFORCE_EAGER", "VLLM_TRUST_REMOTE_CODE"})
 
 
 def _coerce_set_value(key: str, value: str):

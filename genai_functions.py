@@ -72,10 +72,12 @@ def get_llm():
         # All vLLM options come from env (config is synced to env before run in RunModels + TopicModelingInterface.run())
         max_model_len = int(os.getenv("VLLM_MAX_MODEL_LEN", "4096"))
         enforce_eager = os.getenv("VLLM_ENFORCE_EAGER", "true").lower() in ("1", "true", "yes")
+        trust_remote_code = os.getenv("VLLM_TRUST_REMOTE_CODE", "false").lower() in ("1", "true", "yes")
         gpu_mem_util = os.getenv("VLLM_GPU_MEMORY_UTILIZATION")
         llm_kwargs = {
             "enforce_eager": enforce_eager,
             "max_model_len": max_model_len,
+            "trust_remote_code": trust_remote_code,
         }
         if gpu_mem_util is not None:
             llm_kwargs["gpu_memory_utilization"] = float(gpu_mem_util)
