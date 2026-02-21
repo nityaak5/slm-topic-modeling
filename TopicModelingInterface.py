@@ -124,7 +124,7 @@ class TopicModelingInterface:
 
         # Sync all config to env so genai_functions (and any code that reads env) sees config values
         # Skip None values and keys that shouldn't be in env (e.g. paths that are already resolved)
-        skip_keys = {"METADATA_PATH", "DATASET_CSV_PATH", "TEXT_COLUMN", "CATEGORY_COLUMN"}
+        skip_keys = {"METADATA_PATH", "CUSTOM_DATASET_PATH", "TEXT_COLUMN", "CATEGORY_COLUMN"}
         for key, value in self.config.items():
             if key not in skip_keys and value is not None:
                 os.environ[key] = str(value)
@@ -140,18 +140,18 @@ class TopicModelingInterface:
 
         # --- Load dataset once ---
         if self.dataset == "GENERIC":
-            for key in ("DATASET_CSV_PATH", "TEXT_COLUMN"):
+            for key in ("CUSTOM_DATASET_PATH", "TEXT_COLUMN"):
                 if key not in self.config:
                     raise ValueError(f"DATASET='GENERIC' requires {key} in config")
-            csv_path = Path(self.config["DATASET_CSV_PATH"])
-            if not csv_path.exists():
-                raise FileNotFoundError(f"Dataset CSV not found: {csv_path}")
+            dataset_path = Path(self.config["CUSTOM_DATASET_PATH"])
+            if not dataset_path.exists():
+                raise FileNotFoundError(f"Custom dataset path not found: {dataset_path}")
             newsgroups_train = get_dataset_from_csv(
-                csv_path,
+                dataset_path,
                 self.config["TEXT_COLUMN"],
                 self.config.get("CATEGORY_COLUMN"),
             )
-            dataset_name = csv_path.stem
+            dataset_name = dataset_path.stem
         elif self.dataset == "NYT":
             newsgroups_train = get_nyt()
             dataset_name = "NYT"
@@ -167,30 +167,59 @@ class TopicModelingInterface:
             )
             dataset_name = "NEWSGROUPS"
 
-        # --- Filter once: use cached indices if available, else compute and cache ---
-        filter_model = self.config.get("FILTER_TOKENIZER_MODEL", "gpt-3.5-turbo")
-        filter_model_safe = filter_model.replace(".", "_")
-        cache_filename = f".filtered_indices_{dataset_name}_{self.token_limit}_{filter_model_safe}.json"
-        cache_path = output_dir / cache_filename
+        # --- Optional: export loaded documents (before filtering) for auditability ---
+        if self.config.get("EXPORT_LOADED_CSV", False):
+            doc_ids = getattr(
+                newsgroups_train, "source_ids",
+                [str(i) for i in range(len(newsgroups_train.data))],
+            )
+            loaded_df = pd.DataFrame({
+                "doc_id": doc_ids,
+                "content": newsgroups_train.data,
+            })
+            loaded_path = output_dir / f"loaded_documents_{dataset_name}.csv"
+            loaded_df.to_csv(loaded_path, index=False)
+            print(f"  Exported loaded documents to {loaded_path} ({len(loaded_df)} rows)")
 
-        if cache_path.exists():
-            with open(cache_path) as f:
-                cache = json.load(f)
-            filtered_data_indices = cache["indices"]
-            filtered_data = [newsgroups_train.data[i] for i in filtered_data_indices]
-            filtered_labels = [newsgroups_train.target[i] for i in filtered_data_indices]
-        else:
-            from genai_functions import get_tokenizer_for_filtering
-            filter_encoder = get_tokenizer_for_filtering(model_name=filter_model)
+        # --- Filter once: use cached indices if available, else compute and cache ---
+        # When SKIP_TOKEN_FILTER is True, use all loaded docs (only drop empty); no cache.
+        skip_token_filter = self.config.get("SKIP_TOKEN_FILTER", False)
+        if skip_token_filter:
             filtered_data_indices = [
-                i
-                for i, document in enumerate(newsgroups_train.data)
-                if len(document) > 0 and len(filter_encoder.encode(document)) < self.token_limit
+                i for i, document in enumerate(newsgroups_train.data)
+                if len(document) > 0
             ]
             filtered_data = [newsgroups_train.data[i] for i in filtered_data_indices]
             filtered_labels = [newsgroups_train.target[i] for i in filtered_data_indices]
-            with open(cache_path, "w") as f:
-                json.dump({"indices": filtered_data_indices, "dataset": dataset_name, "token_limit": self.token_limit, "filter_model": filter_model}, f)
+        else:
+            filter_model = self.config.get("FILTER_TOKENIZER_MODEL", "gpt-3.5-turbo")
+            filter_model_safe = filter_model.replace(".", "_")
+            cache_filename = f".filtered_indices_{dataset_name}_{self.token_limit}_{filter_model_safe}.json"
+            cache_path = output_dir / cache_filename
+
+            if cache_path.exists():
+                with open(cache_path) as f:
+                    cache = json.load(f)
+                filtered_data_indices = cache["indices"]
+                filtered_data = [newsgroups_train.data[i] for i in filtered_data_indices]
+                filtered_labels = [newsgroups_train.target[i] for i in filtered_data_indices]
+            else:
+                from genai_functions import get_tokenizer_for_filtering
+                filter_encoder = get_tokenizer_for_filtering(model_name=filter_model)
+                filtered_data_indices = [
+                    i
+                    for i, document in enumerate(newsgroups_train.data)
+                    if len(document) > 0 and len(filter_encoder.encode(document)) < self.token_limit
+                ]
+                filtered_data = [newsgroups_train.data[i] for i in filtered_data_indices]
+                filtered_labels = [newsgroups_train.target[i] for i in filtered_data_indices]
+                with open(cache_path, "w") as f:
+                    json.dump({"indices": filtered_data_indices, "dataset": dataset_name, "token_limit": self.token_limit, "filter_model": filter_model}, f)
+
+        # Use actual number of docs that will be processed for folder name and summary (not config default)
+        use_all_docs = self.config.get("USE_ALL_DOCUMENTS", False)
+        n_docs_actual = len(filtered_data) if use_all_docs else min(self.n_documents, len(filtered_data))
+        self.n_documents = n_docs_actual
 
         run_folder = output_dir / f"{self.__class__.__name__}_{self.n_documents}_{dataset_name}_{self.model_tag}_{self.sampling_method}"
         run_folder.mkdir(parents=True, exist_ok=True)
@@ -226,22 +255,22 @@ class TopicModelingInterface:
 
             # Same seed each run so same document set every run (measure method variance, not data variance)
             random.seed(self.seed)
-            if self.sampling_method == "equal":
+            use_all_docs = self.config.get("USE_ALL_DOCUMENTS", False)
+            n_take = len(filtered_data) if use_all_docs else min(self.n_documents, len(filtered_data))
+            num_classes = len(set(filtered_labels))
+            # When we have no real labels (single class) or random sampling, sample without per-class constraint
+            if self.sampling_method == "equal" and num_classes > 1:
                 try:
                     documents, labels = self.sample_equal_per_class(
                         filtered_data, filtered_labels, self.n_documents, random_state=self.seed
                     )
                 except ValueError as e:
                     print(f"Warning: Equal sampling failed ({e}), falling back to random sampling")
-                    indices = random.sample(
-                        range(len(filtered_data)), min(self.n_documents, len(filtered_data))
-                    )
+                    indices = random.sample(range(len(filtered_data)), n_take)
                     documents = [filtered_data[i] for i in indices]
                     labels = [filtered_labels[i] for i in indices]
             else:
-                indices = random.sample(
-                    range(len(filtered_data)), min(self.n_documents, len(filtered_data))
-                )
+                indices = random.sample(range(len(filtered_data)), n_take)
                 documents = [filtered_data[i] for i in indices]
                 labels = [filtered_labels[i] for i in indices]
 

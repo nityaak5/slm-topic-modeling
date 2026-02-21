@@ -20,5 +20,8 @@
   "METADATA_PATH": null,
   "SAMPLING_METHOD": "equal",
   "CARBON_TRACKING": true,
-  "FILTER_TOKENIZER_MODEL": "gpt-3.5-turbo"
+  "FILTER_TOKENIZER_MODEL": "gpt-3.5-turbo",
+  "EXPORT_LOADED_CSV": false,
+  "SKIP_TOKEN_FILTER": false,
+  "USE_ALL_DOCUMENTS": false
 }

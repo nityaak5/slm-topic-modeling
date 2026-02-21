@@ -2,7 +2,7 @@
 """Unified entry point for running topic modeling experiments.
 
 Default config is config.json. Override any key with --set KEY=VALUE (int/bool keys are coerced).
-Supports predefined datasets (NYT, ARXIV, PUBMED, NEWSGROUPS) and custom CSV via --dataset-csv with --text-column (and optional --category-column).
+Supports predefined datasets (NYT, ARXIV, PUBMED, NEWSGROUPS) and custom data via --custom-dataset: a CSV file or a directory of JSON files; use --text-column (and optional --category-column).
 """
 
 import argparse
@@ -32,7 +32,7 @@ CONFIG_INT_KEYS = frozenset({
     "SEED", "N_runs", "N_documents", "N_TOPICS", "N_FEATURES", "TOKEN_LIMIT",
     "VLLM_TENSOR_PARALLEL_SIZE", "VLLM_MAX_MODEL_LEN",
 })
-CONFIG_BOOL_KEYS = frozenset({"CARBON_TRACKING", "VLLM_ENFORCE_EAGER", "VLLM_TRUST_REMOTE_CODE"})
+CONFIG_BOOL_KEYS = frozenset({"CARBON_TRACKING", "VLLM_ENFORCE_EAGER", "VLLM_TRUST_REMOTE_CODE", "EXPORT_LOADED_CSV", "SKIP_TOKEN_FILTER", "USE_ALL_DOCUMENTS"})
 
 
 def _coerce_set_value(key: str, value: str):
@@ -112,7 +112,7 @@ def validate_csv_dataset(
     import pandas as pd
 
     if not dataset_path.exists():
-        print(f"ERROR: Dataset file not found: {dataset_path}")
+        print(f"ERROR: Dataset path not found: {dataset_path}")
         sys.exit(1)
     try:
         df = pd.read_csv(dataset_path)
@@ -135,6 +135,31 @@ def validate_csv_dataset(
         print(f"  Category column: {category_column}")
 
 
+def validate_generic_dataset_path(
+    dataset_path: Path,
+    text_column: str,
+    category_column: Optional[str] = None,
+) -> None:
+    """Validate GENERIC dataset path (CSV file or directory of JSON files). Exits on error."""
+    path = Path(dataset_path)
+    if not path.exists():
+        print(f"ERROR: Dataset path not found: {path}")
+        sys.exit(1)
+    if path.is_file():
+        validate_csv_dataset(path, text_column, category_column)
+    elif path.is_dir():
+        json_files = list(path.glob("*.json"))
+        if not json_files:
+            print(f"ERROR: No .json files found in directory: {path}")
+            sys.exit(1)
+        print(f" Loaded dataset (JSON dir): {path}")
+        print(f"  Number of .json files: {len(json_files)}")
+        print(f"  Text field (in each JSON): {text_column}")
+    else:
+        print(f"ERROR: Path is neither a file nor a directory: {path}")
+        sys.exit(1)
+
+
 def load_config(config_path="config.json", cli_overrides=None):
     """Load configuration. Defaults from config.json; overrides from CLI (--set, --output-dir, dataset)."""
     config_file = Path(config_path)
@@ -152,7 +177,7 @@ def load_config(config_path="config.json", cli_overrides=None):
 
     # Sync all config to env so genai_functions (and any code that reads env) sees config values
     # Skip None values and keys that shouldn't be in env (e.g. paths that are already resolved)
-    skip_keys = {"METADATA_PATH", "DATASET_CSV_PATH", "TEXT_COLUMN", "CATEGORY_COLUMN"}
+    skip_keys = {"METADATA_PATH", "CUSTOM_DATASET_PATH", "TEXT_COLUMN", "CATEGORY_COLUMN"}
     for key, value in config.items():
         if key not in skip_keys and value is not None:
             os.environ[key] = str(value)
@@ -201,8 +226,11 @@ Examples:
   # Predefined dataset
   python RunModels.py --dataset NYT
 
-  # Custom CSV dataset
-  python RunModels.py --dataset-csv data_in/my_data.csv --text-column text --category-column category
+  # Custom dataset (CSV file)
+  python RunModels.py --custom-dataset data_in/my_data.csv --text-column text --category-column category
+
+  # Custom dataset (directory of JSON files; empty content skipped)
+  python RunModels.py --custom-dataset custom_data --text-column content
 
   # Override config keys (any key in config.json)
   python RunModels.py --dataset NYT --set N_TOPICS=30 --set N_documents=400 --set SEED=42
@@ -222,20 +250,21 @@ Examples:
         help="Predefined dataset name",
     )
     mutex.add_argument(
-        "--dataset-csv",
+        "--custom-dataset",
         type=Path,
-        help="Path to custom CSV dataset file",
+        dest="custom_dataset",
+        help="Path to custom dataset: CSV file or directory of JSON files (use --text-column for column/field name, e.g. content)",
     )
     dataset_group.add_argument(
         "--text-column",
         type=str,
-        help="Text column in CSV (required with --dataset-csv)",
+        help="Text column (CSV) or JSON field name (required with --custom-dataset; e.g. content)",
     )
     dataset_group.add_argument(
         "--category-column",
         type=str,
         default=None,
-        help="Category/label column in CSV (optional)",
+        help="Category/label column (CSV) or JSON field (optional)",
     )
 
     # --- Config overrides ---
@@ -295,18 +324,18 @@ Examples:
     if not args.skip_deps_check:
         check_requirements_txt(REQUIREMENTS_FILE)
     
-    # Handle CSV dataset
+    # Handle custom dataset (CSV file or JSON directory)
     cli_overrides = {}
-    if args.dataset_csv:
+    if args.custom_dataset:
         if not args.text_column:
-            parser.error("--text-column is required when using --dataset-csv")
-        validate_csv_dataset(
-            args.dataset_csv,
+            parser.error("--text-column is required when using --custom-dataset")
+        validate_generic_dataset_path(
+            args.custom_dataset,
             args.text_column,
             args.category_column,
         )
         cli_overrides["DATASET"] = "GENERIC"
-        cli_overrides["DATASET_CSV_PATH"] = str(args.dataset_csv.resolve())
+        cli_overrides["CUSTOM_DATASET_PATH"] = str(args.custom_dataset.resolve())
         cli_overrides["TEXT_COLUMN"] = args.text_column
         if args.category_column is not None:
             cli_overrides["CATEGORY_COLUMN"] = args.category_column
@@ -326,7 +355,7 @@ Examples:
     print("Configuration")
     print(f"{'='*60}")
     for key, value in sorted(config.items()):
-        if key == "DATASET_CSV_PATH" and value:
+        if key == "CUSTOM_DATASET_PATH" and value:
             print(f"  {key}: {Path(value).name}")
         else:
             print(f"  {key}: {value}")

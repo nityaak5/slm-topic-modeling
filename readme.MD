@@ -40,7 +40,7 @@ python RunModels.py --dataset NYT
 Run with your own CSV file. Metadata is automatically created - no separate step needed:
 
 ```bash
-python RunModels.py --dataset-csv data_in/my_data.csv --text-column text --category-column category
+python RunModels.py --custom-dataset data_in/my_data.csv --text-column text --category-column category
 ```
 
 The script will:
