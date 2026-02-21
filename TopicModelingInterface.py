@@ -167,6 +167,10 @@ class TopicModelingInterface:
             )
             dataset_name = "NEWSGROUPS"
 
+        # Organise output by dataset: data_out/{dataset_name}/...
+        output_dir_for_dataset = output_dir / dataset_name
+        output_dir_for_dataset.mkdir(parents=True, exist_ok=True)
+
         # --- Optional: export loaded documents (before filtering) for auditability ---
         if self.config.get("EXPORT_LOADED_CSV", False):
             doc_ids = getattr(
@@ -177,7 +181,7 @@ class TopicModelingInterface:
                 "doc_id": doc_ids,
                 "content": newsgroups_train.data,
             })
-            loaded_path = output_dir / f"loaded_documents_{dataset_name}.csv"
+            loaded_path = output_dir_for_dataset / f"loaded_documents_{dataset_name}.csv"
             loaded_df.to_csv(loaded_path, index=False)
             print(f"  Exported loaded documents to {loaded_path} ({len(loaded_df)} rows)")
 
@@ -221,7 +225,7 @@ class TopicModelingInterface:
         n_docs_actual = len(filtered_data) if use_all_docs else min(self.n_documents, len(filtered_data))
         self.n_documents = n_docs_actual
 
-        run_folder = output_dir / f"{self.__class__.__name__}_{self.n_documents}_{dataset_name}_{self.model_tag}_{self.sampling_method}"
+        run_folder = output_dir_for_dataset / f"{self.__class__.__name__}_{self.n_documents}_{dataset_name}_{self.model_tag}_{self.sampling_method}"
         run_folder.mkdir(parents=True, exist_ok=True)
 
         # Carbon tracking (vLLM only): GPU energy/CO2 via carbontracker (total only).

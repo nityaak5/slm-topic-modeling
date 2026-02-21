@@ -232,6 +232,9 @@ Examples:
   # Custom dataset (directory of JSON files; empty content skipped)
   python RunModels.py --custom-dataset custom_data --text-column content
 
+  # Custom dataset from config defaults (set CUSTOM_DATASET_PATH, TEXT_COLUMN in config.json)
+  python RunModels.py --dataset GENERIC
+
   # Override config keys (any key in config.json)
   python RunModels.py --dataset NYT --set N_TOPICS=30 --set N_documents=400 --set SEED=42
 
@@ -246,8 +249,8 @@ Examples:
     mutex.add_argument(
         "--dataset",
         type=str,
-        choices=["NYT", "ARXIV", "PUBMED", "NEWSGROUPS"],
-        help="Predefined dataset name",
+        choices=["NYT", "ARXIV", "PUBMED", "NEWSGROUPS", "GENERIC"],
+        help="Predefined dataset name; GENERIC = use config's CUSTOM_DATASET_PATH and TEXT_COLUMN",
     )
     mutex.add_argument(
         "--custom-dataset",
@@ -324,8 +327,14 @@ Examples:
     if not args.skip_deps_check:
         check_requirements_txt(REQUIREMENTS_FILE)
     
-    # Handle custom dataset (CSV file or JSON directory)
-    cli_overrides = {}
+    # Handle dataset: custom (CLI path) vs predefined vs GENERIC (config default custom)
+    cli_overrides = parse_set_overrides(args.set) or {}
+    if args.output_dir is not None:
+        cli_overrides["OUTPUT_DIR"] = str(args.output_dir.resolve())
+
+    # Load config first so we can use config defaults for --dataset GENERIC
+    config = load_config(args.config, cli_overrides)
+
     if args.custom_dataset:
         if not args.text_column:
             parser.error("--text-column is required when using --custom-dataset")
@@ -334,21 +343,25 @@ Examples:
             args.text_column,
             args.category_column,
         )
-        cli_overrides["DATASET"] = "GENERIC"
-        cli_overrides["CUSTOM_DATASET_PATH"] = str(args.custom_dataset.resolve())
-        cli_overrides["TEXT_COLUMN"] = args.text_column
-        if args.category_column is not None:
-            cli_overrides["CATEGORY_COLUMN"] = args.category_column
+        config["DATASET"] = "GENERIC"
+        config["CUSTOM_DATASET_PATH"] = str(args.custom_dataset.resolve())
+        config["TEXT_COLUMN"] = args.text_column
+        config["CATEGORY_COLUMN"] = args.category_column
+    elif args.dataset == "GENERIC":
+        for key in ("CUSTOM_DATASET_PATH", "TEXT_COLUMN"):
+            if not config.get(key):
+                print(f"ERROR: --dataset GENERIC requires {key} in config (e.g. config.json)")
+                sys.exit(1)
+        custom_path = Path(config["CUSTOM_DATASET_PATH"]).resolve()
+        validate_generic_dataset_path(
+            custom_path,
+            config["TEXT_COLUMN"],
+            config.get("CATEGORY_COLUMN"),
+        )
+        config["DATASET"] = "GENERIC"
+        config["CUSTOM_DATASET_PATH"] = str(custom_path)
     else:
-        # Use predefined dataset
-        cli_overrides["DATASET"] = args.dataset
-    
-    cli_overrides.update(parse_set_overrides(args.set))
-    if args.output_dir is not None:
-        cli_overrides["OUTPUT_DIR"] = str(args.output_dir.resolve())
-
-    # Load config
-    config = load_config(args.config, cli_overrides)
+        config["DATASET"] = args.dataset
     
     # Print configuration
     print(f"\n{'='*60}")

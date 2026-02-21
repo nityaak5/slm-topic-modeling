@@ -23,5 +23,8 @@
   "FILTER_TOKENIZER_MODEL": "gpt-3.5-turbo",
   "EXPORT_LOADED_CSV": false,
   "SKIP_TOKEN_FILTER": false,
-  "USE_ALL_DOCUMENTS": false
+  "USE_ALL_DOCUMENTS": false,
+  "CUSTOM_DATASET_PATH": "custom_data",
+  "TEXT_COLUMN": "content",
+  "CATEGORY_COLUMN": null
 }
