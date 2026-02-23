@@ -26,5 +26,6 @@
   "USE_ALL_DOCUMENTS": false,
   "CUSTOM_DATASET_PATH": "custom_data",
   "TEXT_COLUMN": "content",
-  "CATEGORY_COLUMN": null
+  "CATEGORY_COLUMN": null,
+  "METHOD_TYPE": "GenAIMethodOneShotNoPrior"
 }

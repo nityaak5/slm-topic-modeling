@@ -300,8 +300,8 @@ Examples:
         type=str,
         nargs="+",
         choices=["GenAIMethodOneShotNoPrior", "GenAIMethodOneShot", "GenAIMethod", "BERTopicModel", "NMFModel", "LDAGensimModel"],
-        default=["GenAIMethodOneShotNoPrior"],
-        help="Topic modeling method(s) to run (default: GenAIMethodOneShotNoPrior)",
+        default=None,
+        help="Topic modeling method(s) to run (default: from config METHOD_TYPE)",
     )
 
     # --- Options ---
@@ -362,6 +362,11 @@ Examples:
         config["CUSTOM_DATASET_PATH"] = str(custom_path)
     else:
         config["DATASET"] = args.dataset
+
+    # Default method from config when --method-type not provided
+    if args.method_type is None:
+        method_from_config = config.get("METHOD_TYPE", "GenAIMethodOneShotNoPrior")
+        args.method_type = [method_from_config] if isinstance(method_from_config, str) else list(method_from_config)
     
     # Print configuration
     print(f"\n{'='*60}")
