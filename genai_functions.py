@@ -378,6 +378,23 @@ def topic_classification_prompt(document, topics):
     return prompt
 
 
+def stance_classification_prompt(content, query):
+    prompt = "Your task is to determine the stance of the following document toward the given query.\n\n"
+    prompt += f"QUERY: {query}\n\n"
+    prompt += f"DOCUMENT: {content}\n\n"
+    prompt += (
+        'Return valid JSON in exactly this format: {"stance": "pro"}\n'
+    )
+    prompt += 'The "stance" value must be exactly one of: "pro", "against", "neutral", "unclear".\n'
+    prompt += (
+        'Use "pro" when the document overall supports the query, '
+        '"against" when it overall opposes the query, '
+        '"neutral" when it discusses the query without clearly supporting or opposing it, '
+        'and "unclear" when the stance cannot be determined from the document.'
+    )
+    return prompt
+
+
 def topic_elimination_prompt(topics):
     topics = enumerate(topics)
     prompt = (

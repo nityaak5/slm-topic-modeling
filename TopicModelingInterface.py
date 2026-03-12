@@ -424,5 +424,3 @@ class TopicModelingInterface:
         sampled_data, sampled_labels = zip(*combined)
 
         return list(sampled_data), list(sampled_labels)
-
-

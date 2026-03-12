@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Unified entry point for running topic modeling experiments.
+"""Unified entry point for running topic modeling and stance detection experiments.
 
 Default config is config.json. Override any key with --set KEY=VALUE (int/bool keys are coerced).
 Supports predefined datasets (NYT, ARXIV, PUBMED, NEWSGROUPS) and custom data via --custom-dataset: a CSV file or a directory of JSON files; use --text-column (and optional --category-column).
@@ -23,6 +23,7 @@ from GenAIMethod import GenAIMethod
 from GenAIMethodOneShotNoPrior import GenAIMethodOneShotNoPrior
 from NMFModel import NMFModel
 from LDAGensimModel import LDAGensimModel
+from GenAIStanceOneShot import GenAIStanceOneShot
 
 
 REQUIREMENTS_FILE = Path(__file__).with_name("requirements.txt")
@@ -177,7 +178,7 @@ def load_config(config_path="config.json", cli_overrides=None):
 
     # Sync all config to env so genai_functions (and any code that reads env) sees config values
     # Skip None values and keys that shouldn't be in env (e.g. paths that are already resolved)
-    skip_keys = {"METADATA_PATH", "CUSTOM_DATASET_PATH", "TEXT_COLUMN", "CATEGORY_COLUMN"}
+    skip_keys = {"METADATA_PATH", "CUSTOM_DATASET_PATH", "TEXT_COLUMN", "CATEGORY_COLUMN", "QUERY_COLUMN"}
     for key, value in config.items():
         if key not in skip_keys and value is not None:
             os.environ[key] = str(value)
@@ -186,7 +187,35 @@ def load_config(config_path="config.json", cli_overrides=None):
 
 
 def run_models(config, method_types=None):
-    """Run topic modeling with specified methods."""
+    """Run topic modeling or stance detection depending on TASK_TYPE."""
+    task_type = config.get("TASK_TYPE", "topic_modeling")
+    if task_type == "stance_detection":
+        if method_types is None:
+            method_from_config = config.get("METHOD_TYPE", "GenAIStanceOneShot")
+            method_types = [method_from_config] if isinstance(method_from_config, str) else list(method_from_config)
+
+        stance_method_classes = {
+            "GenAIStanceOneShot": GenAIStanceOneShot,
+        }
+
+        models = []
+        for method_type in method_types:
+            if method_type not in stance_method_classes:
+                print(f"WARNING: Unknown stance method type '{method_type}', skipping")
+                continue
+            models.append(stance_method_classes[method_type](config))
+
+        if not models:
+            print("ERROR: No valid stance methods to run")
+            sys.exit(1)
+
+        for model in models:
+            print(f"\n{'='*60}")
+            print(f"Running {model.__class__.__name__}")
+            print(f"{'='*60}")
+            model.run()
+        return
+
     if method_types is None:
         method_types = ["GenAIMethodOneShotNoPrior"]
     
@@ -219,7 +248,7 @@ def run_models(config, method_types=None):
 
 def main():
     parser = argparse.ArgumentParser(
-        description="Run topic modeling experiments",
+        description="Run topic modeling or stance detection experiments",
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 Examples:
@@ -234,6 +263,9 @@ Examples:
 
   # Custom dataset from config defaults (set CUSTOM_DATASET_PATH, TEXT_COLUMN in config.json)
   python RunModels.py --dataset GENERIC
+
+  # Stance detection on custom JSON files with content + query
+  python RunModels.py --custom-dataset custom_data --text-column content --query-column query --task-type stance_detection
 
   # Override config keys (any key in config.json)
   python RunModels.py --dataset NYT --set N_TOPICS=30 --set N_documents=400 --set SEED=42
@@ -250,13 +282,13 @@ Examples:
         "--dataset",
         type=str,
         choices=["NYT", "ARXIV", "PUBMED", "NEWSGROUPS", "GENERIC"],
-        help="Predefined dataset name; GENERIC = use config's CUSTOM_DATASET_PATH and TEXT_COLUMN",
+        help="Predefined dataset name; GENERIC = use config's custom dataset settings",
     )
     mutex.add_argument(
         "--custom-dataset",
         type=Path,
         dest="custom_dataset",
-        help="Path to custom dataset: CSV file or directory of JSON files (use --text-column for column/field name, e.g. content)",
+        help="Path to custom dataset: CSV file or directory of JSON files",
     )
     dataset_group.add_argument(
         "--text-column",
@@ -268,6 +300,12 @@ Examples:
         type=str,
         default=None,
         help="Category/label column (CSV) or JSON field (optional)",
+    )
+    dataset_group.add_argument(
+        "--query-column",
+        type=str,
+        default=None,
+        help="Query column/field for stance detection datasets (default: query)",
     )
 
     # --- Config overrides ---
@@ -299,9 +337,9 @@ Examples:
         "--method-type",
         type=str,
         nargs="+",
-        choices=["GenAIMethodOneShotNoPrior", "GenAIMethodOneShot", "GenAIMethod", "BERTopicModel", "NMFModel", "LDAGensimModel"],
+        choices=["GenAIMethodOneShotNoPrior", "GenAIMethodOneShot", "GenAIMethod", "BERTopicModel", "NMFModel", "LDAGensimModel", "GenAIStanceOneShot"],
         default=None,
-        help="Topic modeling method(s) to run (default: from config METHOD_TYPE)",
+        help="Method(s) to run. Topic and stance methods are validated against TASK_TYPE.",
     )
 
     # --- Options ---
@@ -316,9 +354,15 @@ Examples:
         action="store_true",
         help="Skip dependency check",
     )
+    options_group.add_argument(
+        "--task-type",
+        type=str,
+        choices=["topic_modeling", "stance_detection"],
+        help="Task mode. Use stance_detection to load paired content+query examples.",
+    )
     
     args = parser.parse_args()
-    choices = ["GenAIMethodOneShotNoPrior", "GenAIMethodOneShot", "GenAIMethod", "BERTopicModel", "NMFModel", "LDAGensimModel"]
+    choices = ["GenAIMethodOneShotNoPrior", "GenAIMethodOneShot", "GenAIMethod", "BERTopicModel", "NMFModel", "LDAGensimModel", "GenAIStanceOneShot"]
     # Check dependencies
     if args.check_deps:
         check_requirements_txt(REQUIREMENTS_FILE)
@@ -334,10 +378,20 @@ Examples:
 
     # Load config first so we can use config defaults for --dataset GENERIC
     config = load_config(args.config, cli_overrides)
+    if args.task_type is not None:
+        config["TASK_TYPE"] = args.task_type
+    else:
+        config.setdefault("TASK_TYPE", "topic_modeling")
+    if args.query_column is not None:
+        config["QUERY_COLUMN"] = args.query_column
+    else:
+        config.setdefault("QUERY_COLUMN", "query")
 
     if args.custom_dataset:
         if not args.text_column:
             parser.error("--text-column is required when using --custom-dataset")
+        if config["TASK_TYPE"] == "stance_detection" and not config.get("QUERY_COLUMN"):
+            parser.error("--task-type stance_detection requires --query-column or QUERY_COLUMN in config")
         validate_generic_dataset_path(
             args.custom_dataset,
             args.text_column,
@@ -352,6 +406,9 @@ Examples:
             if not config.get(key):
                 print(f"ERROR: --dataset GENERIC requires {key} in config (e.g. config.json)")
                 sys.exit(1)
+        if config["TASK_TYPE"] == "stance_detection" and not config.get("QUERY_COLUMN"):
+            print("ERROR: --task-type stance_detection requires QUERY_COLUMN in config or --query-column on CLI")
+            sys.exit(1)
         custom_path = Path(config["CUSTOM_DATASET_PATH"]).resolve()
         validate_generic_dataset_path(
             custom_path,

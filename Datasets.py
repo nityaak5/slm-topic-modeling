@@ -72,6 +72,122 @@ class GenericDataset:
         self.df = pd.DataFrame({"doc_id": self.source_ids, text_field: self.data})
 
 
+class GenericStanceDataset:
+    """Generic stance dataset from a CSV file or a directory of JSON files.
+
+    Each example is loaded as paired inputs:
+    - content/text field
+    - query field
+    """
+
+    def __init__(
+        self,
+        dataset_path: Path,
+        text_column: str,
+        query_column: str = "query",
+        category_column: Optional[str] = None,
+    ):
+        path = Path(dataset_path)
+        if path.is_file():
+            self._load_csv(path, text_column, query_column, category_column)
+        elif path.is_dir():
+            self._load_json_dir(path, text_column, query_column, category_column)
+        else:
+            raise FileNotFoundError(f"Dataset path is neither a file nor a directory: {path}")
+
+    def _load_csv(
+        self,
+        path: Path,
+        text_column: str,
+        query_column: str,
+        category_column: Optional[str],
+    ) -> None:
+        self.df = pd.read_csv(path)
+        self.data = self.df[text_column].fillna("").astype(str).tolist()
+        self.queries = self.df[query_column].fillna("").astype(str).tolist()
+
+        valid_indices = [
+            i for i, (content, query) in enumerate(zip(self.data, self.queries))
+            if content.strip() and query.strip()
+        ]
+        self.data = [self.data[i] for i in valid_indices]
+        self.queries = [self.queries[i] for i in valid_indices]
+
+        if category_column and category_column in self.df.columns:
+            raw_labels = self.df[category_column].astype(str).tolist()
+            raw_labels = [raw_labels[i] for i in valid_indices]
+            idx_mapping = {x: i for i, x in enumerate(dict.fromkeys(raw_labels))}
+            self.target = [idx_mapping[x] for x in raw_labels]
+            self.target_names = {i: x for x, i in idx_mapping.items()}
+        else:
+            self.target = [0] * len(self.data)
+            self.target_names = {0: "unknown"}
+
+        if "id" in self.df.columns:
+            source_ids = self.df["id"].astype(str).tolist()
+            self.source_ids = [source_ids[i] for i in valid_indices]
+        else:
+            self.source_ids = [str(i) for i in range(len(self.data))]
+
+        self.df = pd.DataFrame(
+            {
+                "doc_id": self.source_ids,
+                text_column: self.data,
+                query_column: self.queries,
+            }
+        )
+
+    def _load_json_dir(
+        self,
+        path: Path,
+        text_field: str,
+        query_field: str,
+        category_column: Optional[str] = None,
+    ) -> None:
+        self.data = []
+        self.queries = []
+        self.source_ids = []
+        raw_labels: list[str] = []
+
+        for p in sorted(path.glob("*.json")):
+            try:
+                with open(p, encoding="utf-8") as f:
+                    obj = json.load(f)
+            except (json.JSONDecodeError, OSError):
+                continue
+
+            text = (obj.get(text_field) or "").strip()
+            query = (obj.get(query_field) or "").strip()
+            if not text or not query:
+                continue
+
+            self.data.append(text)
+            self.queries.append(query)
+            self.source_ids.append(str(obj.get("_id", p.stem)))
+            if category_column:
+                val = obj.get(category_column)
+                raw_labels.append(str(val).strip() if val is not None and str(val).strip() else "unknown")
+            else:
+                raw_labels.append("unknown")
+
+        if raw_labels:
+            unique = list(dict.fromkeys(raw_labels))
+            idx_mapping = {x: i for i, x in enumerate(unique)}
+            self.target = [idx_mapping[x] for x in raw_labels]
+            self.target_names = {i: x for i, x in enumerate(unique)}
+        else:
+            self.target = []
+            self.target_names = {0: "unknown"}
+
+        self.df = pd.DataFrame(
+            {
+                "doc_id": self.source_ids,
+                text_field: self.data,
+                query_field: self.queries,
+            }
+        )
+
+
 class NYTDataset:
     def __init__(self):
         self.df = pd.read_csv('data_in/ny_times_articles.csv')
@@ -123,7 +239,23 @@ def get_dataset_from_csv(
     )
 
 
+def get_stance_dataset(
+    dataset_path: Path,
+    text_column: str,
+    query_column: str = "query",
+    category_column: Optional[str] = None,
+):
+    """Load stance dataset from CSV path or JSON directory."""
+    return GenericStanceDataset(
+        Path(dataset_path),
+        text_column,
+        query_column,
+        category_column,
+    )
+
+
 if __name__ == '__main__':
     arxiv = get_arxiv()
     nytimes = get_nyt()
     print(nytimes.target_names)
+    
