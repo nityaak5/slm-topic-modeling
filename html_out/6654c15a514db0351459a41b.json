@@ -1,0 +1,14 @@
+{
+  "_id": "6654c15a514db0351459a41b",
+  "source": "yandex",
+  "url": "https://www.reuters.com/world/europe/top-russian-court-bans-lgbt-movement-extremist-2023-11-30/",
+  "timestamp": "2026-03-03 11:44:58.362836",
+  "content": "",
+  "web_title": "Top Russian court bans LGBT movement as 'extremist'",
+  "query": "lgbt extremisten",
+  "query_type": "lgbt",
+  "country": "nl",
+  "themes": "['LGBT', 'PROTEST', 'MOVEMENT_GENERAL', 'EXTREMISM', 'TERROR', 'ARMEDCONFLICT', 'ARREST', 'MEDIA_MSM', 'TRIAL', 'MOVEMENT_SOCIAL', 'BAN', 'LEGISLATION', 'GENERAL_HEALTH', 'MEDICAL', 'LEADER', 'RELIGION', 'UNREST_BELLIGERENT', 'MOVEMENT_OTHER', 'IDEOLOGY']",
+  "tone": -3.27868852459016,
+  "success": true
+}

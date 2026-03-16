@@ -1,0 +1,8 @@
+{
+  "_id": "1719",
+  "content": "RT @hale_razor:#HillaryAccomplishments 1 of select few people fired 4 being 2 unethical 2 investigate Watergate #SemST",
+  "query": "Hillary Clinton",
+  "stance_label": "against",
+  "stance_label_original": "AGAINST",
+  "source_dataset": "SemEval-2016 Task 6 trainingdata"
+}

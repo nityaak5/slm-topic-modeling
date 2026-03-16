@@ -1,0 +1,8 @@
+{
+  "_id": "1928",
+  "content": "Who's monica Lewinsky's favorite football player? Ha-Ha Clinton Dix  #SemST",
+  "query": "Hillary Clinton",
+  "stance_label": "against",
+  "stance_label_original": "AGAINST",
+  "source_dataset": "SemEval-2016 Task 6 trainingdata"
+}

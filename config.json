@@ -1,6 +1,6 @@
 {
   "SEED": 44,
-  "N_runs": 5,
+  "N_runs": 1,
   "N_documents": 800,
   "N_TOPICS": 50,
   "TOKEN_LIMIT": 6000,
@@ -28,6 +28,7 @@
   "CUSTOM_DATASET_PATH": "custom_data",
   "TEXT_COLUMN": "content",
   "QUERY_COLUMN": "query",
+  "STANCE_PROMPT_NAME": "default",
   "CATEGORY_COLUMN": null,
   "METHOD_TYPE": "GenAIMethodOneShotNoPrior"
 }

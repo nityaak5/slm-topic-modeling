@@ -1,0 +1,8 @@
+{
+  "_id": "2069",
+  "content": "Casually hangin' with @HillaryClinton on a conference call while taking a break at #ACUHOI. #SemST",
+  "query": "Hillary Clinton",
+  "stance_label": "pro",
+  "stance_label_original": "FAVOR",
+  "source_dataset": "SemEval-2016 Task 6 trainingdata"
+}

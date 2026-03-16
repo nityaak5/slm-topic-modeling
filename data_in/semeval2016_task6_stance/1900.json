@@ -1,0 +1,8 @@
+{
+  "_id": "1900",
+  "content": "@FoxNews report shows U.S. State Department cannot locate 15 of Hillary Clinton's Private Emails.  Not so fast, Hillary! #SemST",
+  "query": "Hillary Clinton",
+  "stance_label": "against",
+  "stance_label_original": "AGAINST",
+  "source_dataset": "SemEval-2016 Task 6 trainingdata"
+}

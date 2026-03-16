@@ -1,0 +1,8 @@
+{
+  "_id": "1706",
+  "content": "I'm a woman. Can I be President? @StopHillaryPAC #SemST",
+  "query": "Hillary Clinton",
+  "stance_label": "against",
+  "stance_label_original": "AGAINST",
+  "source_dataset": "SemEval-2016 Task 6 trainingdata"
+}

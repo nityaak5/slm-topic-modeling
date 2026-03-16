@@ -1,0 +1,8 @@
+{
+  "_id": "1987",
+  "content": "@HillaryClinton You Flip/Flopped on the Gay marriage issue; must be more votes available with your current view? #SemST",
+  "query": "Hillary Clinton",
+  "stance_label": "against",
+  "stance_label_original": "AGAINST",
+  "source_dataset": "SemEval-2016 Task 6 trainingdata"
+}

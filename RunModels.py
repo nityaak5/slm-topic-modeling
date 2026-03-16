@@ -24,6 +24,7 @@ from GenAIMethodOneShotNoPrior import GenAIMethodOneShotNoPrior
 from NMFModel import NMFModel
 from LDAGensimModel import LDAGensimModel
 from GenAIStanceOneShot import GenAIStanceOneShot
+from GenAIStanceZeroShotCoT import GenAIStanceZeroShotCoT
 
 
 REQUIREMENTS_FILE = Path(__file__).with_name("requirements.txt")
@@ -178,7 +179,7 @@ def load_config(config_path="config.json", cli_overrides=None):
 
     # Sync all config to env so genai_functions (and any code that reads env) sees config values
     # Skip None values and keys that shouldn't be in env (e.g. paths that are already resolved)
-    skip_keys = {"METADATA_PATH", "CUSTOM_DATASET_PATH", "TEXT_COLUMN", "CATEGORY_COLUMN", "QUERY_COLUMN"}
+    skip_keys = {"METADATA_PATH", "CUSTOM_DATASET_PATH", "TEXT_COLUMN", "CATEGORY_COLUMN", "QUERY_COLUMN", "STANCE_PROMPT_NAME"}
     for key, value in config.items():
         if key not in skip_keys and value is not None:
             os.environ[key] = str(value)
@@ -196,6 +197,7 @@ def run_models(config, method_types=None):
 
         stance_method_classes = {
             "GenAIStanceOneShot": GenAIStanceOneShot,
+            "GenAIStanceZeroShotCoT": GenAIStanceZeroShotCoT,
         }
 
         models = []
@@ -307,6 +309,12 @@ Examples:
         default=None,
         help="Query column/field for stance detection datasets (default: query)",
     )
+    dataset_group.add_argument(
+        "--prompt-name",
+        type=str,
+        default=None,
+        help="Prompt template name for stance detection runs (e.g. default, paper_task_definition)",
+    )
 
     # --- Config overrides ---
     overrides_group = parser.add_argument_group(
@@ -337,7 +345,7 @@ Examples:
         "--method-type",
         type=str,
         nargs="+",
-        choices=["GenAIMethodOneShotNoPrior", "GenAIMethodOneShot", "GenAIMethod", "BERTopicModel", "NMFModel", "LDAGensimModel", "GenAIStanceOneShot"],
+        choices=["GenAIMethodOneShotNoPrior", "GenAIMethodOneShot", "GenAIMethod", "BERTopicModel", "NMFModel", "LDAGensimModel", "GenAIStanceOneShot", "GenAIStanceZeroShotCoT"],
         default=None,
         help="Method(s) to run. Topic and stance methods are validated against TASK_TYPE.",
     )
@@ -362,7 +370,7 @@ Examples:
     )
     
     args = parser.parse_args()
-    choices = ["GenAIMethodOneShotNoPrior", "GenAIMethodOneShot", "GenAIMethod", "BERTopicModel", "NMFModel", "LDAGensimModel", "GenAIStanceOneShot"]
+    choices = ["GenAIMethodOneShotNoPrior", "GenAIMethodOneShot", "GenAIMethod", "BERTopicModel", "NMFModel", "LDAGensimModel", "GenAIStanceOneShot", "GenAIStanceZeroShotCoT"]
     # Check dependencies
     if args.check_deps:
         check_requirements_txt(REQUIREMENTS_FILE)
@@ -386,6 +394,10 @@ Examples:
         config["QUERY_COLUMN"] = args.query_column
     else:
         config.setdefault("QUERY_COLUMN", "query")
+    if args.prompt_name is not None:
+        config["STANCE_PROMPT_NAME"] = args.prompt_name
+    else:
+        config.setdefault("STANCE_PROMPT_NAME", "default")
 
     if args.custom_dataset:
         if not args.text_column:

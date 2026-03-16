@@ -1,0 +1,14 @@
+{
+  "_id": "663bf3d127a3c26cbdc8e162",
+  "source": "google",
+  "url": "https://www.novinky.cz/clanek/domaci-extremiste-jsou-dnes-spis-ctyricatnici-frustrovani-z-osobniho-i-politickeho-vyvoje-rika-odbornik-40443441",
+  "timestamp": "2026-03-03 11:26:41.324978",
+  "content": "Zdá se, že se stránka nepodařila správně načíst. Může to být způsobeno některými rozšířeními prohlížečů, jako jsou blokátory reklam, nebo připojení přes VPN či proxy. This may be caused by certain browser extensions, such as ad blockers, or by connecting through a VPN or proxy. Zkuste rozšíření dočasně vypnout - buď v nastavení prohlížeče, nebo přímo ve vašem počítači, případně se zkuste odpojit od VPN či proxy. Až změny provedete, zkuste stránku znovu načíst. Pokud problém přetrvává, obraťte se na naši technickou podporu nebo podporu použitého nástroje. Try temporarily disabling the extensions – either in your browser settings or directly on your computer – or disconnect from any VPN or proxy. Once you’ve made these changes, please try reloading the page. If the issue persists, contact our technical support or the support team of the tool you’re using. Technické informace: Nelze načíst https://cmp.seznam.cz/js/cmp2/scmp-cw.js Technical details: Unable to load https://cmp.seznam.cz/js/cmp2/scmp-cw.js",
+  "web_title": "Extremisté jsou dnes spíš čtyřicátníci frustrovaní z osobního ...",
+  "query": "marek jedraszewski je extrémista",
+  "query_type": "international_anti.local",
+  "country": "cz",
+  "themes": "['EXTREMISM', 'TERROR', 'ARMEDCONFLICT', 'MOVEMENT_GENERAL', 'GENERAL_GOVERNMENT', 'BORDER', 'DEMOCRACY', 'IMMIGRATION', 'ALLIANCE', 'RELEASE_HOSTAGE', 'LEADER', 'ELECTION', 'SECURITY_SERVICES', 'INFO_HOAX', 'INFO_RUMOR', 'REBELLION', 'AFFECT', 'REFUGEES', 'PROTEST', 'MOVEMENT_ENVIRONMENTAL', 'KIDNAP', 'BLOCKADE', 'SEIGE', 'TRIAL', 'CRIME_COMMON_ROBBERY']",
+  "tone": -4.78821362799263,
+  "success": true
+}

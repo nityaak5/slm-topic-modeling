@@ -1,0 +1,8 @@
+{
+  "_id": "2100",
+  "content": "#AskBobby would you blame an obscure film maker for the death of #USAmbassador in #Benghazi like #SemST",
+  "query": "Hillary Clinton",
+  "stance_label": "against",
+  "stance_label_original": "AGAINST",
+  "source_dataset": "SemEval-2016 Task 6 trainingdata"
+}

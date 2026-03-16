@@ -385,14 +385,70 @@ def stance_classification_prompt(content, query):
     prompt += (
         'Return valid JSON in exactly this format: {"stance": "pro"}\n'
     )
-    prompt += 'The "stance" value must be exactly one of: "pro", "against", "neutral", "unclear".\n'
+    prompt += 'The "stance" value must be exactly one of: "pro", "against", "neutral".\n'
     prompt += (
         'Use "pro" when the document overall supports the query, '
-        '"against" when it overall opposes the query, '
+        '"against" when it overall opposes the query, and '
         '"neutral" when it discusses the query without clearly supporting or opposing it, '
-        'and "unclear" when the stance cannot be determined from the document.'
+        # 'and "unclear" when the stance cannot be determined from the document.'
     )
     return prompt
+
+
+def stance_classification_task_definition(content, query):
+    prompt = (
+        "Stance classification is the task of determining the expressed or implied opinion, "
+        "or stance, of a document toward a certain, specified target. "
+        "Analyze the following document and determine its stance toward the provided query.\n\n"
+    )
+    prompt += f"query: {query}\n"
+    prompt += f"document: {content}\n"
+    prompt += (
+        'Return ONLY valid JSON in exactly this format: {"stance": "pro"}\n'
+    )
+    prompt += 'The "stance" value must be exactly one of: "pro", "against", "neutral".\n'
+    prompt += (
+        'Use "pro" when the document overall supports the query, '
+        '"against" when it overall opposes the query, and '
+        '"neutral" when it discusses the query without clearly supporting or opposing it, '
+        # 'and "unclear" when the stance cannot be determined from the document.'
+    )
+    return prompt
+
+
+def stance_zero_shot_cot_prompt(content, query, stance_reason=None):
+    if stance_reason is None:
+        prompt = (
+            "Stance classification is the task of determining the expressed or implied opinion, "
+            "or stance, of a statement toward a certain, specified target. Think step-by-step "
+            "and explain the stance (pro, against, neutral, or unrelated) of the social media "
+            "statement towards the query.\n"
+        )
+        prompt += f"query: {query}\n"
+        prompt += f"content: {content}\n"
+        prompt += "explanation:\n"
+        prompt += 'Return ONLY valid JSON in exactly this format: {"reasoning": "your explanation"}'
+        return prompt
+
+    prompt = '''Therefore, based on your explanation, {stance_reason}, what is the final stance? Respond with a single word: "pro", "against", "neutral", or "unrelated". Only return the stance as a single word, and no other text.
+        query: {query}
+        content: {content}
+        stance:'''.format(stance_reason=stance_reason, query=query, content=content)
+    prompt += '\nReturn ONLY valid JSON in exactly this format: {"stance": "pro"}'
+    prompt += '\nThe "stance" value must be exactly one of: "pro", "against", "neutral", or "unrelated".'
+    return prompt
+
+
+def get_stance_prompt(content, query, prompt_name="default"):
+    prompt_builders = {
+        "default": stance_classification_prompt,
+        "task_definition": stance_classification_task_definition,
+    }
+    if prompt_name not in prompt_builders:
+        raise ValueError(
+            f"Unknown stance prompt '{prompt_name}'. Available prompts: {', '.join(sorted(prompt_builders))}"
+        )
+    return prompt_builders[prompt_name](content, query)
 
 
 def topic_elimination_prompt(topics):

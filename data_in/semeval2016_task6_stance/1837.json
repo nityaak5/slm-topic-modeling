@@ -1,0 +1,8 @@
+{
+  "_id": "1837",
+  "content": "@thehill #MamaHillary is making the case here & just exclusively how to deal with complex social issues. #cnn #bbc #Mamaclinton #SemST",
+  "query": "Hillary Clinton",
+  "stance_label": "pro",
+  "stance_label_original": "FAVOR",
+  "source_dataset": "SemEval-2016 Task 6 trainingdata"
+}

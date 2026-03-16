@@ -1,0 +1,12 @@
+{
+  "_id": "6642412798588429643636ae",
+  "source": "_id\n6642412798588429643636ae    yandex\n6642412798588429643636ae    yandex\nName: SearchEngineName, dtype: object",
+  "url": "https://www.bbc.com/news/world-us-canada-55814358",
+  "timestamp": "2026-03-03 11:33:07.044503",
+  "content": "",
+  "web_title": "_id\n6642412798588429643636ae    The LGBT agenda has always been about populati...\n6642412798588429643636ae                Biden kicks off inclusive LGBT agenda\nName: Text, dtype: object",
+  "query": "_id\n6642412798588429643636ae    lgbt agenda je hrozbou pro spole\u010dnost\n6642412798588429643636ae    lgbt agenda je hrozbou pro spole\u010dnost\nName: Query, dtype: object",
+  "query_type": "_id\n6642412798588429643636ae    lgbt\n6642412798588429643636ae    lgbt\nName: BaseCondition, dtype: object",
+  "country": "_id\n6642412798588429643636ae    cz\n6642412798588429643636ae    cz\nName: Country, dtype: object",
+  "success": false
+}

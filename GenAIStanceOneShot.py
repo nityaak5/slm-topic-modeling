@@ -1,14 +1,15 @@
 from StanceDetectionInterface import StanceDetectionInterface
-from genai_functions import complete_request, stance_classification_prompt
+from genai_functions import complete_request, get_stance_prompt
 
 
 class GenAIStanceOneShot(StanceDetectionInterface):
     def __init__(self, config):
         super().__init__(config)
+        self.prompt_name = config.get("STANCE_PROMPT_NAME", "default")
 
     def predict_stances(self, examples):
         prompts = [
-            stance_classification_prompt(example["content"], example["query"])
+            get_stance_prompt(example["content"], example["query"], self.prompt_name)
             for example in examples
         ]
         results = complete_request(prompts, debug=False)

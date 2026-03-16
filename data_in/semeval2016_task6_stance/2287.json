@@ -1,0 +1,8 @@
+{
+  "_id": "2287",
+  "content": ".@HillaryClinton The spatula seems appropriate, given that it can be used to easily flip positions if the heat gets to high. #SemST",
+  "query": "Hillary Clinton",
+  "stance_label": "against",
+  "stance_label_original": "AGAINST",
+  "source_dataset": "SemEval-2016 Task 6 trainingdata"
+}

@@ -1,0 +1,8 @@
+{
+  "_id": "1716",
+  "content": "@HillaryClinton had more twitter followers then all four major Republican candidates (Bush, Rubio, Paul, Cruz) COMBINED. #SemST",
+  "query": "Hillary Clinton",
+  "stance_label": "pro",
+  "stance_label_original": "FAVOR",
+  "source_dataset": "SemEval-2016 Task 6 trainingdata"
+}

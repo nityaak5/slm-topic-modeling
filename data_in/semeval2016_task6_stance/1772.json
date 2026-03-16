@@ -1,0 +1,8 @@
+{
+  "_id": "1772",
+  "content": "Breaking News: #Hillary trades campaign bus for a broomstick. #SemST",
+  "query": "Hillary Clinton",
+  "stance_label": "against",
+  "stance_label_original": "AGAINST",
+  "source_dataset": "SemEval-2016 Task 6 trainingdata"
+}

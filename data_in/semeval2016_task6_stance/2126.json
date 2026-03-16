@@ -1,0 +1,8 @@
+{
+  "_id": "2126",
+  "content": "@liars_never_win @HillaryClinton shhh, go get me an iced tea..... #SemST",
+  "query": "Hillary Clinton",
+  "stance_label": "against",
+  "stance_label_original": "AGAINST",
+  "source_dataset": "SemEval-2016 Task 6 trainingdata"
+}

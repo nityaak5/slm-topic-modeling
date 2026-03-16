@@ -1,0 +1,14 @@
+{
+  "_id": "663073f7d482d4b8ee83ac62",
+  "source": "bing",
+  "url": "https://www.novinky.cz/clanek/komentare-komentar-nenavist-je-smrtelne-nakazliva-alexander-tomsky-40469734",
+  "timestamp": "2026-03-03 10:56:28.867655",
+  "content": "Zdá se, že se stránka nepodařila správně načíst. Může to být způsobeno některými rozšířeními prohlížečů, jako jsou blokátory reklam, nebo připojení přes VPN či proxy. This may be caused by certain browser extensions, such as ad blockers, or by connecting through a VPN or proxy. Zkuste rozšíření dočasně vypnout - buď v nastavení prohlížeče, nebo přímo ve vašem počítači, případně se zkuste odpojit od VPN či proxy. Až změny provedete, zkuste stránku znovu načíst. Pokud problém přetrvává, obraťte se na naši technickou podporu nebo podporu použitého nástroje. Try temporarily disabling the extensions – either in your browser settings or directly on your computer – or disconnect from any VPN or proxy. Once you’ve made these changes, please try reloading the page. If the issue persists, contact our technical support or the support team of the tool you’re using. Technické informace: Nelze načíst https://cmp.seznam.cz/js/cmp2/scmp-cw.js Technical details: Unable to load https://cmp.seznam.cz/js/cmp2/scmp-cw.js",
+  "web_title": "KOMENTÁŘ: Nenávist je smrtelně nakažlivá - Alexander Tomský",
+  "query": "homofobie bude trestná",
+  "query_type": "lgbt",
+  "country": "cz",
+  "themes": "['KILL', 'EDUCATION', 'MOVEMENT_GENERAL', 'TERROR', 'ARMEDCONFLICT', 'GENERAL_GOVERNMENT', 'DEMOCRACY', 'SELF_IDENTIFIED_ATROCITY', 'PROTEST', 'MEDIA_MSM', 'RELEASE_HOSTAGE', 'KIDNAP', 'BORDER', 'DRONES', 'SLFID_DICTATORSHIP', 'RELIGION', 'LGBT', 'DISCRIMINATION', 'DISCRIMINATION_LGBT', 'DISCRIMINATION_LGBT_HOMOPHOBIA', 'LEADER', 'MILITARY', 'SELF_IDENTIFIED_HUMANITARIAN_CRISIS', 'CEASEFIRE']",
+  "tone": -9.36863543788187,
+  "success": true
+}

@@ -1,0 +1,8 @@
+{
+  "_id": "2095",
+  "content": "@CorrectRecord is quite obsessed with emails and transparency. Why did Hillary Clinton destroy her emails? #clintonemail #SemST",
+  "query": "Hillary Clinton",
+  "stance_label": "against",
+  "stance_label_original": "AGAINST",
+  "source_dataset": "SemEval-2016 Task 6 trainingdata"
+}

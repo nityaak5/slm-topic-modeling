@@ -1,0 +1,8 @@
+{
+  "_id": "2105",
+  "content": "Fashion News: Hillary has a new clothing line coming out called Flip Flops R US   #tcot #Benghazi #SemST",
+  "query": "Hillary Clinton",
+  "stance_label": "against",
+  "stance_label_original": "AGAINST",
+  "source_dataset": "SemEval-2016 Task 6 trainingdata"
+}

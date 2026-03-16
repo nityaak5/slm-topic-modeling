@@ -1,0 +1,14 @@
+{
+  "_id": "66436c8e7e1ceb286ca78b51",
+  "source": "bing",
+  "url": "https://www.nytimes.com/2023/11/30/world/europe/russia-gay-rights-law.html",
+  "timestamp": "2026-03-03 11:31:45.998686",
+  "content": "",
+  "web_title": "Russia Declares Gay Rights Movement as ‘Extremist’ - The New …",
+  "query": "gay propaganda",
+  "query_type": "lgbt",
+  "country": "nl",
+  "themes": "['LGBT', 'ARMEDCONFLICT', 'UNREST_BELLIGERENT', 'MOVEMENT_GENERAL', 'MOVEMENT_SOCIAL', 'MOVEMENT_OTHER', 'EXTREMISM', 'TERROR', 'PROTEST', 'SELF_IDENTIFIED_HUMAN_RIGHTS', 'EDUCATION', 'LEGISLATION', 'PROPAGANDA', 'LEADER', 'TRIAL', 'ELECTION', 'GENERAL_GOVERNMENT', 'ARREST', 'SECURITY_SERVICES', 'MEDIA_SOCIAL', 'BAN', 'MEDIA_MSM', 'GENERAL_HEALTH', 'MEDICAL', 'IDEOLOGY']",
+  "tone": -4.56349206349207,
+  "success": true
+}

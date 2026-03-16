@@ -1,0 +1,8 @@
+{
+  "_id": "2007",
+  "content": "One of Hillary Clinton's biggest idols is Margaret Sanger, who called for the extermination of colored people. #SemST",
+  "query": "Hillary Clinton",
+  "stance_label": "against",
+  "stance_label_original": "AGAINST",
+  "source_dataset": "SemEval-2016 Task 6 trainingdata"
+}

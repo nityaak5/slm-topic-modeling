@@ -1,0 +1,8 @@
+{
+  "_id": "2098",
+  "content": "#AskBobby Do you think #HillaryClinton has turned over all of those emails on her private server she destroyed! #SemST",
+  "query": "Hillary Clinton",
+  "stance_label": "against",
+  "stance_label_original": "AGAINST",
+  "source_dataset": "SemEval-2016 Task 6 trainingdata"
+}

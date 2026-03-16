@@ -1,0 +1,8 @@
+{
+  "_id": "2109",
+  "content": "RT @HillaryHaikus: #Ready because one day girls will say: I want to be President, too.  #ReadyForHillary #haiku #SemST",
+  "query": "Hillary Clinton",
+  "stance_label": "against",
+  "stance_label_original": "AGAINST",
+  "source_dataset": "SemEval-2016 Task 6 trainingdata"
+}

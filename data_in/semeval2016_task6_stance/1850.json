@@ -1,0 +1,8 @@
+{
+  "_id": "1850",
+  "content": "@Upworthy @HillaryClinton It should be illegal for an employer to discriminate against their workers. #EqualityForAll #SemST",
+  "query": "Hillary Clinton",
+  "stance_label": "pro",
+  "stance_label_original": "FAVOR",
+  "source_dataset": "SemEval-2016 Task 6 trainingdata"
+}

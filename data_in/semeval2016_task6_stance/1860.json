@@ -1,0 +1,8 @@
+{
+  "_id": "1860",
+  "content": "As late as 2013 #HillaryClinton opposed marriage equality. #SemST",
+  "query": "Hillary Clinton",
+  "stance_label": "against",
+  "stance_label_original": "AGAINST",
+  "source_dataset": "SemEval-2016 Task 6 trainingdata"
+}

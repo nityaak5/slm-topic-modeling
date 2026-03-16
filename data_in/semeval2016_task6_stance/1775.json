@@ -1,0 +1,8 @@
+{
+  "_id": "1775",
+  "content": "I'd love for some reporter to ask, \"Sec Clinton, will u b returning the White House china, if elected? Or did u already hock it? #SemST",
+  "query": "Hillary Clinton",
+  "stance_label": "against",
+  "stance_label_original": "AGAINST",
+  "source_dataset": "SemEval-2016 Task 6 trainingdata"
+}

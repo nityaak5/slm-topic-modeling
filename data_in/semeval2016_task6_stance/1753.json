@@ -1,0 +1,8 @@
+{
+  "_id": "1753",
+  "content": "@WhiteHouse @BarackObama @HillaryforIA @BarackObama The whole #world is supporting you. #SemST",
+  "query": "Hillary Clinton",
+  "stance_label": "pro",
+  "stance_label_original": "FAVOR",
+  "source_dataset": "SemEval-2016 Task 6 trainingdata"
+}

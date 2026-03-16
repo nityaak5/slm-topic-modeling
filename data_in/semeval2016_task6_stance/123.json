@@ -1,0 +1,8 @@
+{
+  "_id": "123",
+  "content": "'Pop may throw in the towel second half.. #SemST",
+  "query": "Atheism",
+  "stance_label": "neutral",
+  "stance_label_original": "NONE",
+  "source_dataset": "SemEval-2016 Task 6 trainingdata"
+}

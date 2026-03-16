@@ -1,0 +1,14 @@
+{
+  "_id": "6654db6257054874bb6bd808",
+  "source": "google",
+  "url": "https://www.novinky.cz/clanek/domaci-pravidla-pro-uredni-zmenu-pohlavi-tristi-koalici-40459216",
+  "timestamp": "2026-03-03 11:25:19.035078",
+  "content": "Zdá se, že se stránka nepodařila správně načíst. Může to být způsobeno některými rozšířeními prohlížečů, jako jsou blokátory reklam, nebo připojení přes VPN či proxy. This may be caused by certain browser extensions, such as ad blockers, or by connecting through a VPN or proxy. Zkuste rozšíření dočasně vypnout - buď v nastavení prohlížeče, nebo přímo ve vašem počítači, případně se zkuste odpojit od VPN či proxy. Až změny provedete, zkuste stránku znovu načíst. Pokud problém přetrvává, obraťte se na naši technickou podporu nebo podporu použitého nástroje. Try temporarily disabling the extensions – either in your browser settings or directly on your computer – or disconnect from any VPN or proxy. Once you’ve made these changes, please try reloading the page. If the issue persists, contact our technical support or the support team of the tool you’re using. Technické informace: Nelze načíst https://cmp.seznam.cz/js/cmp2/scmp-cw.js Technical details: Unable to load https://cmp.seznam.cz/js/cmp2/scmp-cw.js",
+  "web_title": "Pravidla pro úřední změnu pohlaví tříští koalici",
+  "query": "úřední změna pohlaví pro děti",
+  "query_type": "gender",
+  "country": "cz",
+  "themes": "['ALLIANCE', 'AFFECT', 'GENERAL_GOVERNMENT', 'DISCRIMINATION', 'GENERAL_HEALTH', 'MEDICAL', 'LEADER', 'PIRACY', 'SELF_IDENTIFIED_HUMAN_RIGHTS', 'CONSTITUTIONAL', 'LEGISLATION']",
+  "tone": -4.11255411255411,
+  "success": true
+}

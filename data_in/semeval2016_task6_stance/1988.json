@@ -1,0 +1,8 @@
+{
+  "_id": "1988",
+  "content": "@HillaryClinton More lies and hypocrisy. As senator of NY, you clearly said you were opposed to gay marriage. #SemST",
+  "query": "Hillary Clinton",
+  "stance_label": "against",
+  "stance_label_original": "AGAINST",
+  "source_dataset": "SemEval-2016 Task 6 trainingdata"
+}

@@ -1,0 +1,8 @@
+{
+  "_id": "1990",
+  "content": "@LaureneDiCillo @NBCNews @dl34l And why are major media outlets not exposing Hillary's blatant flip flopping on this issue. #SemST",
+  "query": "Hillary Clinton",
+  "stance_label": "against",
+  "stance_label_original": "AGAINST",
+  "source_dataset": "SemEval-2016 Task 6 trainingdata"
+}

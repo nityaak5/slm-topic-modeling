@@ -1,0 +1,8 @@
+{
+  "_id": "1843",
+  "content": "A proper introduction of Hillary Clinton should begin with five words: Will the defendant please rise #WhyImNotVotingForHillary #SemST",
+  "query": "Hillary Clinton",
+  "stance_label": "against",
+  "stance_label_original": "AGAINST",
+  "source_dataset": "SemEval-2016 Task 6 trainingdata"
+}

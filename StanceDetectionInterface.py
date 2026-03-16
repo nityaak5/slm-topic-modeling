@@ -30,6 +30,7 @@ class StanceDetectionInterface:
         self.carbon_tracking = config.get("CARBON_TRACKING", True)
         self.co2_per_km_g = float(config.get("CO2_PER_KM_G", 120.0))
         self.model_tag = self._get_model_tag()
+        self.prompt_name = config.get("STANCE_PROMPT_NAME", "default")
 
     def _get_model_tag(self):
         backend = self.config.get("LLM_BACKEND", "vllm")
@@ -58,6 +59,7 @@ class StanceDetectionInterface:
             "vllm_model": self.config.get("VLLM_MODEL", "meta-llama/Llama-2-7b-chat-hf"),
             "openai_model": self.config.get("OPENAI_MODEL", "gpt-3.5-turbo"),
             "sampling_method": self.sampling_method,
+            "stance_prompt_name": self.prompt_name,
             "carbon_tracking": self.carbon_tracking,
             "co2_per_km_g": self.co2_per_km_g,
             "output_dir": str(run_folder.parent),
@@ -118,6 +120,11 @@ class StanceDetectionInterface:
                     "doc_id": stance_dataset.source_ids[i],
                     "content": content,
                     "query": stance_dataset.queries[i],
+                    "original_stance": (
+                        stance_dataset.target_names.get(stance_dataset.target[i])
+                        if getattr(stance_dataset, "target", None) and i < len(stance_dataset.target)
+                        else None
+                    ),
                 }
             )
 
@@ -184,7 +191,8 @@ class StanceDetectionInterface:
 
         n_docs_actual = min(self.n_documents, len(filtered_examples))
         self.n_documents = n_docs_actual
-        run_folder = output_dir_for_dataset / f"{self.__class__.__name__}_{self.n_documents}_{dataset_name}_{self.model_tag}_{self.sampling_method}"
+        prompt_tag = self.prompt_name.replace("/", "-").replace(" ", "_")
+        run_folder = output_dir_for_dataset / f"{self.__class__.__name__}_{self.n_documents}_{dataset_name}_{self.model_tag}_{self.sampling_method}_{prompt_tag}"
         run_folder.mkdir(parents=True, exist_ok=True)
 
         use_carbon = (
@@ -224,6 +232,11 @@ class StanceDetectionInterface:
             predictions = self.predict_stances(sampled_examples)
             if tracker is not None:
                 tracker.epoch_end()
+
+            reasoning_texts = getattr(self, "latest_reasoning_texts", None)
+            if reasoning_texts is not None:
+                for i, example in enumerate(sampled_examples):
+                    example["reasoning"] = reasoning_texts[i] if i < len(reasoning_texts) else None
 
             normalized_predictions, failed_parses = self._normalize_predictions(predictions, len(sampled_examples))
             label_counts = Counter(label for label in normalized_predictions if label is not None)
@@ -288,6 +301,8 @@ class StanceDetectionInterface:
                         "doc_id": example["doc_id"],
                         "content": example["content"],
                         "query": example["query"],
+                        "original_stance": example.get("original_stance"),
+                        "reasoning": example.get("reasoning"),
                         "predicted_stance": normalized_predictions[i],
                     }
                 )

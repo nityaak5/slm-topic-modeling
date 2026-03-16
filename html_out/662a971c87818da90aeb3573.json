@@ -1,0 +1,14 @@
+{
+  "_id": "662a971c87818da90aeb3573",
+  "source": "_id\n662a971c87818da90aeb3573    mojeek\n662a971c87818da90aeb3573    mojeek\nName: SearchEngineName, dtype: object",
+  "url": "http://www.atv.hu/belfold/20211225-emberbarat-eletigenlo-eredeti-ember-volt-jezus",
+  "timestamp": "2026-03-03 10:32:49.537723",
+  "content": "Vissza a főoldalra FacebookX (Twitter)YouTubeInstagram #### Keresett kifejezés FacebookX (Twitter)YouTubeInstagram FacebookX (Twitter)YouTubeInstagram #### Keresett kifejezés #### Keresett kifejezés #### Keresett kifejezés #### Keresett kifejezés ### A keresett oldal nem található 404 - A keresett oldalt eltávolítottuk, vagy megváltozott a címe. Vissza a főoldalra 404 - A keresett oldalt eltávolítottuk, vagy megváltozott a címe.",
+  "web_title": "_id\n662a971c87818da90aeb3573    Hogyan és miért orbánosodott el Orbán egykori ...\n662a971c87818da90aeb3573     Emberbarát, életigenlő, eredeti ember volt Jézus\nName: Text, dtype: object",
+  "query": "_id\n662a971c87818da90aeb3573    viktor orbán szélsőséges\n662a971c87818da90aeb3573    viktor orbán szélsőséges\nName: Query, dtype: object",
+  "query_type": "_id\n662a971c87818da90aeb3573    anti\n662a971c87818da90aeb3573    anti\nName: BaseCondition, dtype: object",
+  "country": "_id\n662a971c87818da90aeb3573    hu\n662a971c87818da90aeb3573    hu\nName: Country, dtype: object",
+  "themes": "_id\n662a971c87818da90aeb3573    ['URBAN', 'LEADER', 'LEGISLATION', 'PROTEST', ...\n662a971c87818da90aeb3573    ['RELIGION', 'LEGISLATION', 'MOVEMENT_GENERAL'...\nName: THEMES, dtype: object",
+  "tone": "_id\n662a971c87818da90aeb3573   -2.882767\n662a971c87818da90aeb3573   -2.320442\nName: TONE, dtype: float64",
+  "success": true
+}

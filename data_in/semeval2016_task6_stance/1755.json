@@ -1,0 +1,8 @@
+{
+  "_id": "1755",
+  "content": "@HillaryClinton The deceit hand? Thats a hand you know well. Right? #SemST",
+  "query": "Hillary Clinton",
+  "stance_label": "against",
+  "stance_label_original": "AGAINST",
+  "source_dataset": "SemEval-2016 Task 6 trainingdata"
+}

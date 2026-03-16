@@ -1,0 +1,8 @@
+{
+  "_id": "1842",
+  "content": "If you're not watching @HillaryClinton's speech right now you're missing her drop tons of wisdom. #SemST",
+  "query": "Hillary Clinton",
+  "stance_label": "pro",
+  "stance_label_original": "FAVOR",
+  "source_dataset": "SemEval-2016 Task 6 trainingdata"
+}

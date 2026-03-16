@@ -1,0 +1,8 @@
+{
+  "_id": "1904",
+  "content": "@HillaryClinton @ca_hillary stand on the right side #SemST",
+  "query": "Hillary Clinton",
+  "stance_label": "pro",
+  "stance_label_original": "FAVOR",
+  "source_dataset": "SemEval-2016 Task 6 trainingdata"
+}
