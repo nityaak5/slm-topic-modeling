@@ -1,0 +1,7 @@
+{
+  "_id": "10802",
+  "content": "@HillaryClinton made me proud today!  Nothing like reinforcing what I already knew!  #SemST",
+  "query": "Hillary Clinton",
+  "stance_label": "FAVOR",
+  "source_dataset": "SemEval-2016 Task 6 subtaskA testdata gold"
+}

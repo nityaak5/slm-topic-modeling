@@ -1,0 +1,7 @@
+{
+  "_id": "10742",
+  "content": "The recent comments of #HillaryClinton sounded like it was #Netanyahu speaking. Doesn't bode well. #SemST",
+  "query": "Hillary Clinton",
+  "stance_label": "AGAINST",
+  "source_dataset": "SemEval-2016 Task 6 subtaskA testdata gold"
+}

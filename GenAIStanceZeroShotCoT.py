@@ -35,9 +35,7 @@ class GenAIStanceZeroShotCoT(StanceDetectionInterface):
     def assign_stance(self, result):
         if result is None or "stance" not in result:
             return None
-        stance = str(result["stance"]).strip().lower()
-        if stance == "unrelated":
-            stance = "neutral"
+        stance = self.canonicalize_stance_label(result["stance"])
         if stance not in self.valid_stances:
             return None
         return stance

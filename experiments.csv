@@ -1,0 +1,7 @@
+exp_id,llm_backend,openai_model,vllm_model,vllm_max_model_len,task_type,method_type,prompt_name,custom_dataset,text_column,query_column,category_column
+1,vllm,,microsoft/Phi-4-mini-instruct,32768,stance_detection,GenAIStanceOneShot,task_definition,data_in/semeval2016_task6_testdata_gold,content,query,stance_label
+2,vllm,,microsoft/phi-4,16384,stance_detection,GenAIStanceOneShot,task_definition,data_in/semeval2016_task6_testdata_gold,content,query,stance_label
+3,vllm,,meta-llama/Llama-3.1-8B-Instruct,,stance_detection,GenAIStanceOneShot,task_definition,data_in/semeval2016_task6_testdata_gold,content,query,stance_label
+4,vllm,,Qwen/Qwen3-4B-Instruct-2507,,stance_detection,GenAIStanceOneShot,task_definition,data_in/semeval2016_task6_testdata_gold,content,query,stance_label
+5,vllm,,Qwen/Qwen3-8B,,stance_detection,GenAIStanceOneShot,task_definition,data_in/semeval2016_task6_testdata_gold,content,query,stance_label
+6,vllm,,Qwen/Qwen3-14B,,stance_detection,GenAIStanceOneShot,task_definition,data_in/semeval2016_task6_testdata_gold,content,query,stance_label

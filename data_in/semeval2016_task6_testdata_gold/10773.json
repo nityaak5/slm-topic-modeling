@@ -1,0 +1,7 @@
+{
+  "_id": "10773",
+  "content": "Based on the long lines, I thought it was free burrito day at Pancheros but it was actually Hillary! #ReadyForHillary #SemST",
+  "query": "Hillary Clinton",
+  "stance_label": "FAVOR",
+  "source_dataset": "SemEval-2016 Task 6 subtaskA testdata gold"
+}

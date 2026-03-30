@@ -1,0 +1,7 @@
+{
+  "_id": "10876",
+  "content": "@CNN One would hope everyone would be fired up over such a blatant lie #SemST",
+  "query": "Hillary Clinton",
+  "stance_label": "AGAINST",
+  "source_dataset": "SemEval-2016 Task 6 subtaskA testdata gold"
+}

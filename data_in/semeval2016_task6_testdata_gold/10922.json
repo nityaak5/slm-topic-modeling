@@ -1,0 +1,7 @@
+{
+  "_id": "10922",
+  "content": "@HillaryClinton Hillary is a Directioner! This is awesome! :-) They need to sing at your Inauguration! #SemST",
+  "query": "Hillary Clinton",
+  "stance_label": "FAVOR",
+  "source_dataset": "SemEval-2016 Task 6 subtaskA testdata gold"
+}

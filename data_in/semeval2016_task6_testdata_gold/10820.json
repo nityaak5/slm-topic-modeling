@@ -1,0 +1,7 @@
+{
+  "_id": "10820",
+  "content": "SUCCESS:  @HillaryClinton said she's receiving a constant barrage of attacks from \"the Right.\"  Great job, guys. Keep it up! #SemST",
+  "query": "Hillary Clinton",
+  "stance_label": "AGAINST",
+  "source_dataset": "SemEval-2016 Task 6 subtaskA testdata gold"
+}

@@ -1,0 +1,7 @@
+{
+  "_id": "10696",
+  "content": "RT @harrisongolden: \"So Clinton-esque,\" Brit Hume said of Hillary's email controversy. \"You never quite get the whole truth.\"> #SemST",
+  "query": "Hillary Clinton",
+  "stance_label": "AGAINST",
+  "source_dataset": "SemEval-2016 Task 6 subtaskA testdata gold"
+}

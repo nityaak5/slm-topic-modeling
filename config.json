@@ -22,13 +22,13 @@
   "CARBON_TRACKING": true,
   "FILTER_TOKENIZER_MODEL": "gpt-3.5-turbo",
   "EXPORT_LOADED_CSV": false,
-  "SKIP_TOKEN_FILTER": false,
+  "SKIP_TOKEN_FILTER": true,
   "USE_ALL_DOCUMENTS": true,
   "TASK_TYPE": "topic_modeling",
   "CUSTOM_DATASET_PATH": "custom_data",
   "TEXT_COLUMN": "content",
   "QUERY_COLUMN": "query",
-  "STANCE_PROMPT_NAME": "default",
+  "STANCE_PROMPT_NAME": "task_definition",
   "CATEGORY_COLUMN": null,
   "METHOD_TYPE": "GenAIMethodOneShotNoPrior"
 }

@@ -1,0 +1,7 @@
+{
+  "_id": "10937",
+  "content": "Republican on facebook said :If it comes down to a choice between Donald Trump and Hillary,  I'm not voting! #SemST",
+  "query": "Hillary Clinton",
+  "stance_label": "AGAINST",
+  "source_dataset": "SemEval-2016 Task 6 subtaskA testdata gold"
+}

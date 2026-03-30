@@ -16,7 +16,7 @@ class StanceDetectionInterface:
     """Base interface for stance detection pipelines."""
 
     uses_llm = True
-    valid_stances = ("pro", "against", "neutral", "unclear")
+    valid_stances = ("FAVOR", "AGAINST", "NONE")
 
     def __init__(self, config):
         self.config = config
@@ -42,6 +42,24 @@ class StanceDetectionInterface:
 
     def predict_stances(self, examples):
         raise NotImplementedError
+
+    @staticmethod
+    def canonicalize_stance_label(label):
+        if label is None:
+            return None
+        normalized = str(label).strip().upper()
+        mapping = {
+            "FAVOR": "FAVOR",
+            "AGAINST": "AGAINST",
+            "NONE": "NONE",
+            "PRO": "FAVOR",
+            "NEUTRAL": "NONE",
+            "UNCLEAR": "NONE",
+            "UNRELATED": "NONE",
+            "SUPPORTS": "FAVOR",
+            "DENIES": "AGAINST",
+        }
+        return mapping.get(normalized)
 
     def save_summary(self, run_results_list, run_folder, dataset_name, model_limits, carbon_tracking_total=None):
         run_folder = Path(run_folder)
@@ -135,7 +153,8 @@ class StanceDetectionInterface:
         failed_parses = 0
         predictions = predictions or []
         for i in range(n_examples):
-            label = predictions[i] if i < len(predictions) else None
+            raw_label = predictions[i] if i < len(predictions) else None
+            label = self.canonicalize_stance_label(raw_label)
             if label not in self.valid_stances:
                 normalized.append(None)
                 failed_parses += 1
@@ -189,7 +208,8 @@ class StanceDetectionInterface:
 
         filtered_examples = self._build_filtered_examples(stance_dataset, dataset_name, output_dir)
 
-        n_docs_actual = min(self.n_documents, len(filtered_examples))
+        use_all_docs = self.config.get("USE_ALL_DOCUMENTS", False)
+        n_docs_actual = len(filtered_examples) if use_all_docs else min(self.n_documents, len(filtered_examples))
         self.n_documents = n_docs_actual
         prompt_tag = self.prompt_name.replace("/", "-").replace(" ", "_")
         run_folder = output_dir_for_dataset / f"{self.__class__.__name__}_{self.n_documents}_{dataset_name}_{self.model_tag}_{self.sampling_method}_{prompt_tag}"
@@ -224,7 +244,10 @@ class StanceDetectionInterface:
         for counter in tqdm(range(self.n_runs)):
             run_start_time = time.time()
             random.seed(self.seed)
-            sampled_examples = random.sample(filtered_examples, n_docs_actual)
+            if use_all_docs:
+                sampled_examples = list(filtered_examples)
+            else:
+                sampled_examples = random.sample(filtered_examples, n_docs_actual)
             self.current_examples = sampled_examples
 
             if tracker is not None:
@@ -280,10 +303,9 @@ class StanceDetectionInterface:
                     "run_number": counter,
                     "num_examples": len(sampled_examples),
                     "labels_returned": len(predictions) if predictions is not None else 0,
-                    "count_pro": label_counts.get("pro", 0),
-                    "count_against": label_counts.get("against", 0),
-                    "count_neutral": label_counts.get("neutral", 0),
-                    "count_unclear": label_counts.get("unclear", 0),
+                    "count_favor": label_counts.get("FAVOR", 0),
+                    "count_against": label_counts.get("AGAINST", 0),
+                    "count_none": label_counts.get("NONE", 0),
                     "count_failed_parse": failed_parses,
                     "gpu_stats": gpu_stats,
                     "openai_usage": openai_usage,
