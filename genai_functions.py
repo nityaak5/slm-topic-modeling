@@ -3,6 +3,9 @@ import platform
 import json
 import os
 import asyncio
+import csv
+import random
+import re
 from datetime import datetime
 
 # Detect if we're on Mac (where vLLM needs CPU mode)
@@ -31,6 +34,28 @@ from vllm import LLM, SamplingParams
 # Get project root directory (parent of this file's directory)
 PROJECT_ROOT = Path(__file__).parent
 MODELS_DIR = PROJECT_ROOT / "models"
+SEMEVAL_TRAINING_DEFAULT_PATH = PROJECT_ROOT / "data_in" / "semeval2016-task6-trainingdata.txt"
+FEW_SHOT_EXAMPLES_MASTER_PATH = PROJECT_ROOT / "few_shot_examples_master.json"
+FEW_SHOT_EXAMPLES_BY_SHOT = {
+    3: PROJECT_ROOT / "few_shot_examples_3.json",
+    6: PROJECT_ROOT / "few_shot_examples_6.json",
+    9: PROJECT_ROOT / "few_shot_examples_9.json",
+    12: PROJECT_ROOT / "few_shot_examples_12.json",
+}
+
+_PREFERRED_FEW_SHOT_IDS = {
+    "FAVOR": ["119", "616", "1015", "2323"],
+    "AGAINST": ["101", "688", "1012", "2312"],
+    "NONE": ["109", "644", "1032", "2347"],
+}
+_DEFAULT_FEW_SHOT_SEED = 42
+_COLUMN_ALIASES = {
+    "row_id": ("id", "row_id", "rowid", "index", "tweetid", "tweet_id", "original_index"),
+    "query": ("target", "query", "topic", "entity"),
+    "document": ("tweet", "document", "content", "text", "statement"),
+    "stance": ("stance", "label", "stance_label", "stance_label_original"),
+}
+_FEW_SHOT_EXAMPLE_SETS_CACHE = None
 
 # Set HuggingFace cache to use our models directory
 if "HF_HOME" not in os.environ:
@@ -324,6 +349,301 @@ def chunk_documents(
     return chunks, chunk_info
 
 
+def _normalize_whitespace(text):
+    return re.sub(r"\s+", " ", str(text or "")).strip()
+
+
+def normalize_stance_label(label):
+    normalized = _normalize_whitespace(label).upper().replace("-", "_").replace(" ", "_")
+    mapping = {
+        "FAVOR": "FAVOR",
+        "PRO": "FAVOR",
+        "IN_FAVOR": "FAVOR",
+        "AGAINST": "AGAINST",
+        "ANTI": "AGAINST",
+        "CON": "AGAINST",
+        "NONE": "NONE",
+        "NEUTRAL": "NONE",
+        "NEITHER": "NONE",
+        "NO_STANCE": "NONE",
+    }
+    if normalized not in mapping:
+        raise ValueError(f"Unsupported SemEval stance label: {label!r}")
+    return mapping[normalized]
+
+
+def _detect_training_columns(fieldnames):
+    normalized_to_original = {
+        re.sub(r"[^a-z0-9]+", "", (field or "").lower()): field
+        for field in (fieldnames or [])
+        if field
+    }
+    detected = {}
+    for key, aliases in _COLUMN_ALIASES.items():
+        for alias in aliases:
+            alias_key = re.sub(r"[^a-z0-9]+", "", alias.lower())
+            if alias_key in normalized_to_original:
+                detected[key] = normalized_to_original[alias_key]
+                break
+    missing = [key for key in ("query", "document", "stance") if key not in detected]
+    if missing:
+        raise ValueError(
+            f"Could not detect required SemEval training columns {missing} from: {fieldnames}"
+        )
+    return detected
+
+
+def load_semeval_training_examples(path=SEMEVAL_TRAINING_DEFAULT_PATH):
+    training_path = Path(path)
+    if not training_path.exists():
+        raise FileNotFoundError(
+            f"SemEval training file not found at {training_path}. "
+            "Download it from the official Task 6 URL or provide a local path."
+        )
+
+    raw_bytes = training_path.read_bytes()
+    decoded_text = None
+    for encoding in ("utf-8-sig", "cp1252", "latin-1"):
+        try:
+            decoded_text = raw_bytes.decode(encoding)
+            break
+        except UnicodeDecodeError:
+            continue
+    if decoded_text is None:
+        decoded_text = raw_bytes.decode("utf-8", errors="replace")
+
+    sample = decoded_text[:4096]
+    try:
+        dialect = csv.Sniffer().sniff(sample, delimiters="\t,;")
+    except csv.Error:
+        dialect = csv.excel_tab
+    reader = csv.DictReader(decoded_text.splitlines(), dialect=dialect)
+    columns = _detect_training_columns(reader.fieldnames)
+
+    examples = []
+    seen_pairs = set()
+    fallback_index = 0
+    for row in reader:
+        fallback_index += 1
+        query = _normalize_whitespace(row.get(columns["query"], ""))
+        document = _normalize_whitespace(row.get(columns["document"], ""))
+        raw_stance = row.get(columns["stance"], "")
+        if not query or not document or not raw_stance:
+            continue
+
+        stance = normalize_stance_label(raw_stance)
+        row_id = None
+        if "row_id" in columns:
+            row_id = _normalize_whitespace(row.get(columns["row_id"], "")) or None
+        if row_id is None:
+            row_id = str(fallback_index)
+
+        dedupe_key = (query.casefold(), document.casefold(), stance)
+        if dedupe_key in seen_pairs:
+            continue
+        seen_pairs.add(dedupe_key)
+        examples.append(
+            {
+                "row_id": row_id,
+                "query": query,
+                "document": document,
+                "stance": stance,
+            }
+        )
+    return examples
+
+
+def _is_clean_training_example(example):
+    document = example["document"]
+    if not document or document.lower() in {"nan", "none"}:
+        return False
+    if len(document) < 25 or len(document) > 180:
+        return False
+    if "\ufffd" in document:
+        return False
+    if document.count('"') > 6:
+        return False
+    return True
+
+
+def _is_on_topic_neutral(example):
+    if example["stance"] != "NONE":
+        return False
+    query_tokens = {
+        token
+        for token in re.findall(r"[a-z0-9]+", example["query"].lower())
+        if len(token) > 2
+    }
+    document_tokens = set(re.findall(r"[a-z0-9]+", example["document"].lower()))
+    return bool(query_tokens & document_tokens)
+
+
+def _few_shot_example_sort_key(example, rng):
+    document = example["document"]
+    lowered = document.lower()
+    penalties = (
+        int(lowered.startswith("rt ")),
+        int("http" in lowered),
+        int(document.count("@") > 2),
+        abs(len(document) - 95),
+    )
+    return penalties, rng.random(), example["row_id"]
+
+
+def build_nested_few_shot_sets(master_examples):
+    if len(master_examples) != 12:
+        raise ValueError("The master few-shot pool must contain exactly 12 examples.")
+    grouped = {"FAVOR": [], "AGAINST": [], "NONE": []}
+    for example in master_examples:
+        grouped[example["stance"]].append(example)
+    for stance, items in grouped.items():
+        if len(items) != 4:
+            raise ValueError(f"Expected 4 {stance} examples, found {len(items)}.")
+
+    nested_sets = {}
+    for shots_per_label in range(1, 5):
+        examples = []
+        for index in range(shots_per_label):
+            examples.extend(
+                [
+                    grouped["FAVOR"][index],
+                    grouped["AGAINST"][index],
+                    grouped["NONE"][index],
+                ]
+            )
+        nested_sets[shots_per_label * 3] = examples
+    nested_sets["master"] = nested_sets[12]
+    return nested_sets
+
+
+def select_few_shot_examples(train_examples, seed=_DEFAULT_FEW_SHOT_SEED):
+    rng = random.Random(seed)
+    cleaned_examples = [example for example in train_examples if _is_clean_training_example(example)]
+    examples_by_stance = {"FAVOR": [], "AGAINST": [], "NONE": []}
+    examples_by_id = {example["row_id"]: example for example in cleaned_examples}
+    used_ids = set()
+
+    for stance in ("FAVOR", "AGAINST", "NONE"):
+        for preferred_id in _PREFERRED_FEW_SHOT_IDS[stance]:
+            example = examples_by_id.get(preferred_id)
+            if example is not None and example["row_id"] not in used_ids:
+                examples_by_stance[stance].append(example)
+                used_ids.add(example["row_id"])
+
+    neutral_candidates = [
+        example
+        for example in cleaned_examples
+        if example["stance"] == "NONE" and example["row_id"] not in used_ids
+    ]
+    neutral_on_topic = sorted(
+        [example for example in neutral_candidates if _is_on_topic_neutral(example)],
+        key=lambda example: _few_shot_example_sort_key(example, rng),
+    )
+    neutral_off_topic = sorted(
+        [example for example in neutral_candidates if not _is_on_topic_neutral(example)],
+        key=lambda example: _few_shot_example_sort_key(example, rng),
+    )
+
+    while len(examples_by_stance["NONE"]) < 4 and neutral_on_topic:
+        example = neutral_on_topic.pop(0)
+        examples_by_stance["NONE"].append(example)
+        used_ids.add(example["row_id"])
+    while len(examples_by_stance["NONE"]) < 4 and neutral_off_topic:
+        example = neutral_off_topic.pop(0)
+        examples_by_stance["NONE"].append(example)
+        used_ids.add(example["row_id"])
+
+    for stance in ("FAVOR", "AGAINST"):
+        candidates = sorted(
+            [
+                example
+                for example in cleaned_examples
+                if example["stance"] == stance and example["row_id"] not in used_ids
+            ],
+            key=lambda example: _few_shot_example_sort_key(example, rng),
+        )
+        while len(examples_by_stance[stance]) < 4 and candidates:
+            example = candidates.pop(0)
+            examples_by_stance[stance].append(example)
+            used_ids.add(example["row_id"])
+
+    for stance, items in examples_by_stance.items():
+        if len(items) < 4:
+            raise ValueError(f"Unable to select 4 clean {stance} training examples.")
+
+    master_examples = []
+    for index in range(4):
+        master_examples.extend(
+            [
+                examples_by_stance["FAVOR"][index],
+                examples_by_stance["AGAINST"][index],
+                examples_by_stance["NONE"][index],
+            ]
+        )
+    return build_nested_few_shot_sets(master_examples)
+
+
+def render_few_shot_examples(examples):
+    rendered = []
+    for example in examples:
+        rendered.append(f"query: {example['query']}\n")
+        rendered.append(f"document: {example['document']}\n")
+        rendered.append(f'{{"stance":"{example["stance"]}"}}\n\n')
+    return "".join(rendered)
+
+
+def save_few_shot_example_sets(train_path=SEMEVAL_TRAINING_DEFAULT_PATH, output_dir=PROJECT_ROOT, seed=_DEFAULT_FEW_SHOT_SEED):
+    example_sets = select_few_shot_examples(
+        load_semeval_training_examples(train_path),
+        seed=seed,
+    )
+    output_dir = Path(output_dir)
+    output_dir.mkdir(parents=True, exist_ok=True)
+
+    files = {"master": output_dir / FEW_SHOT_EXAMPLES_MASTER_PATH.name}
+    for shots, path in FEW_SHOT_EXAMPLES_BY_SHOT.items():
+        files[shots] = output_dir / path.name
+
+    for key, path in files.items():
+        with path.open("w", encoding="utf-8") as handle:
+            json.dump(example_sets[key], handle, indent=2, ensure_ascii=False)
+            handle.write("\n")
+    return files
+
+
+def _load_saved_few_shot_example_sets():
+    example_sets = {}
+    with FEW_SHOT_EXAMPLES_MASTER_PATH.open("r", encoding="utf-8") as handle:
+        example_sets["master"] = json.load(handle)
+    for shots, path in FEW_SHOT_EXAMPLES_BY_SHOT.items():
+        with path.open("r", encoding="utf-8") as handle:
+            example_sets[shots] = json.load(handle)
+    return example_sets
+
+
+def get_few_shot_example_sets(train_path=SEMEVAL_TRAINING_DEFAULT_PATH, seed=_DEFAULT_FEW_SHOT_SEED):
+    global _FEW_SHOT_EXAMPLE_SETS_CACHE
+    if _FEW_SHOT_EXAMPLE_SETS_CACHE is not None:
+        return _FEW_SHOT_EXAMPLE_SETS_CACHE
+
+    expected_paths = [FEW_SHOT_EXAMPLES_MASTER_PATH, *FEW_SHOT_EXAMPLES_BY_SHOT.values()]
+    if all(path.exists() for path in expected_paths):
+        _FEW_SHOT_EXAMPLE_SETS_CACHE = _load_saved_few_shot_example_sets()
+    else:
+        _FEW_SHOT_EXAMPLE_SETS_CACHE = select_few_shot_examples(
+            load_semeval_training_examples(train_path),
+            seed=seed,
+        )
+    return _FEW_SHOT_EXAMPLE_SETS_CACHE
+
+
+def get_few_shot_examples(num_shots=3, train_path=SEMEVAL_TRAINING_DEFAULT_PATH, seed=_DEFAULT_FEW_SHOT_SEED):
+    example_sets = get_few_shot_example_sets(train_path=train_path, seed=seed)
+    if num_shots not in FEW_SHOT_EXAMPLES_BY_SHOT:
+        raise ValueError(f"Unsupported few-shot size: {num_shots}. Expected one of {sorted(FEW_SHOT_EXAMPLES_BY_SHOT)}.")
+    return example_sets[num_shots]
+
+
 def topic_creation_prompt(documents, type="news articles"):
     """This function takes a list of documents and returns a prompt that can be used to return a list of topics."""
 
@@ -451,8 +771,11 @@ def stance_classification_task_definition_scale_prompt(content, query):
     return prompt
 
 
-def stance_classification_few_shot_prompt(content, query):
-    """Prompt D: few-shot prompt with SemEval-style examples."""
+def stance_classification_few_shot_prompt(content, query, examples=None):
+    """Prompt D: few-shot prompt with SemEval training examples."""
+    if examples is None:
+        examples = get_few_shot_examples(3)
+
     prompt = (
         "Stance classification is the task of determining the expressed or implied opinion, "
         "or stance, of a document toward a specified query.\n"
@@ -461,17 +784,9 @@ def stance_classification_few_shot_prompt(content, query):
         '"AGAINST" when it opposes the query, and '
         '"NONE" when it is neither clearly supporting nor opposing.\n\n'
         "Examples:\n"
-        "query: Atheism\n"
-        "document: Leaving Christianity enables you to love the people you once rejected.\n"
-        '{"stance":"FAVOR"}\n\n'
-        "query: Hillary Clinton\n"
-        "document: Would you trust someone who hides emails and lies to your face?\n"
-        '{"stance":"AGAINST"}\n\n'
-        "query: Legalization of Abortion\n"
-        "document: That person needs help; mental illness is a serious issue.\n"
-        '{"stance":"NONE"}\n\n'
-        "Now classify the following item.\n"
     )
+    prompt += render_few_shot_examples(examples)
+    prompt += "Now classify the following item.\n"
     prompt += f"query: {query}\n"
     prompt += f"document: {content}\n"
     prompt += (
@@ -481,8 +796,24 @@ def stance_classification_few_shot_prompt(content, query):
     return prompt
 
 
+def stance_classification_few_shot_3_prompt(content, query):
+    return stance_classification_few_shot_prompt(content, query, examples=get_few_shot_examples(3))
+
+
+def stance_classification_few_shot_6_prompt(content, query):
+    return stance_classification_few_shot_prompt(content, query, examples=get_few_shot_examples(6))
+
+
+def stance_classification_few_shot_9_prompt(content, query):
+    return stance_classification_few_shot_prompt(content, query, examples=get_few_shot_examples(9))
+
+
+def stance_classification_few_shot_12_prompt(content, query):
+    return stance_classification_few_shot_prompt(content, query, examples=get_few_shot_examples(12))
+
+
 def stance_classification_question_prompt(content, query):
-    """Prompt E: ask as a question instead of direct classify instruction."""
+    
     prompt = (
         "Stance classification is the task of determining the expressed or implied opinion, "
         "or stance, of a statement toward a certain, specified target. "
@@ -555,6 +886,10 @@ def get_stance_prompt(content, query, prompt_name="default", stance_reason=None)
         "task_definition_scale": stance_classification_task_definition_scale_prompt,
         # Prompt D: few-shot
         "few_shot": stance_classification_few_shot_prompt,
+        "few_shot_3": stance_classification_few_shot_3_prompt,
+        "few_shot_6": stance_classification_few_shot_6_prompt,
+        "few_shot_9": stance_classification_few_shot_9_prompt,
+        "few_shot_12": stance_classification_few_shot_12_prompt,
         # Prompt E: question framing
         "question": stance_classification_question_prompt,
         # Prompt C: CoT (executed as 2-step flow in GenAIStanceOneShot)

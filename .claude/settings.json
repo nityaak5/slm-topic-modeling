@@ -1,0 +1,13 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(grep -E \"\\\\.py$|\\\\.csv$|\\\\.ipynb$\")",
+      "Read(//Users/nityaakalra/Desktop/nyt_topic_modeling/**)",
+      "Bash(head -3 /Users/nityaakalra/Desktop/nyt_topic_modeling/topic_modeling_paper/data_out/semeval2016_task6_testdata_gold/*/document_assignments.csv)",
+      "Bash(wc -l /Users/nityaakalra/Desktop/nyt_topic_modeling/topic_modeling_paper/assignments*.csv)",
+      "Bash(python3 -m json.tool)",
+      "Bash(python3 -c ':*)",
+      "Bash(python3)"
+    ]
+  }
+}

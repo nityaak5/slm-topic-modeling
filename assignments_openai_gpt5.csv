@@ -1,3 +1,9 @@
 exp_id,llm_backend,openai_model,vllm_model,vllm_max_model_len,task_type,method_type,prompt_name,custom_dataset,text_column,query_column,category_column
-1,openai,gpt-5.2,,,stance_detection,GenAIStanceOneShot,task_definition_scale,data_in/semeval2016_task6_testdata_gold,content,query,stance_label
-2,openai,gpt-5-mini,,,stance_detection,GenAIStanceOneShot,task_definition_scale,data_in/semeval2016_task6_testdata_gold,content,query,stance_label
+1,openai,gpt-5-mini,,,stance_detection,GenAIStanceOneShot,few_shot_3,data_in/semeval2016_task6_testdata_gold,content,query,stance_label
+2,openai,gpt-5-mini,,,stance_detection,GenAIStanceOneShot,few_shot_6,data_in/semeval2016_task6_testdata_gold,content,query,stance_label
+3,openai,gpt-5-mini,,,stance_detection,GenAIStanceOneShot,few_shot_9,data_in/semeval2016_task6_testdata_gold,content,query,stance_label
+4,openai,gpt-5-mini,,,stance_detection,GenAIStanceOneShot,few_shot_12,data_in/semeval2016_task6_testdata_gold,content,query,stance_label
+5,openai,gpt-5.2,,,stance_detection,GenAIStanceOneShot,few_shot_3,data_in/semeval2016_task6_testdata_gold,content,query,stance_label
+6,openai,gpt-5.2,,,stance_detection,GenAIStanceOneShot,few_shot_6,data_in/semeval2016_task6_testdata_gold,content,query,stance_label
+7,openai,gpt-5.2,,,stance_detection,GenAIStanceOneShot,few_shot_9,data_in/semeval2016_task6_testdata_gold,content,query,stance_label
+8,openai,gpt-5.2,,,stance_detection,GenAIStanceOneShot,few_shot_12,data_in/semeval2016_task6_testdata_gold,content,query,stance_label

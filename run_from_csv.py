@@ -21,11 +21,12 @@ def add_optional_arg(cmd, flag, value):
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("exp_id")
+    parser.add_argument("--csv", default="assignments.csv")
     args = parser.parse_args()
 
-    row = get_row_by_exp_id("assignments.csv", args.exp_id)
+    row = get_row_by_exp_id(args.csv, args.exp_id)
     if row is None:
-        raise ValueError(f"No row found for exp_id={args.exp_id}")
+        raise ValueError(f"No row found for exp_id={args.exp_id} in {args.csv}")
 
     cmd = ["python", "RunModels.py"]
 
