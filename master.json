@@ -1,0 +1,21 @@
+[
+  {"row_id": "134",  "query": "Atheism",                          "document": "Religions stopped being credible the minute the first dinosaur fossil was found.   #SemST",                                                                 "stance": "FAVOR"},
+  {"row_id": "1023", "query": "Feminist Movement",                "document": "Women don't make 75% less than men for the same job. Women, on average, make less then men. Look it up feminazis. #EqualPayDay #SemST",                           "stance": "AGAINST"},
+  {"row_id": "671",  "query": "Climate Change is a Real Concern", "document": "Dear #seattleweather please stay exactly how you are right now. #thismorning #okaythanksbye #SemST",                                                              "stance": "NONE"},
+
+  {"row_id": "1679", "query": "Hillary Clinton",                  "document": "Human rights are women's rights and women's rights are human rights. - Hillary Clinton #SemST",                                                                  "stance": "FAVOR"},
+  {"row_id": "102",  "query": "Atheism",                          "document": "Blessed are the peacemakers, for they shall be called children of God. Matthew 5:9 #scripture #peace #SemST",                                                       "stance": "AGAINST"},
+  {"row_id": "1082", "query": "Feminist Movement",                "document": "Meredith giving Don crap was great,but HOLY CRAP PEGGY. No spoilers, but DAMN was it a great scene. #Peggy #MadMen #SemST",                                          "stance": "NONE"},
+
+  {"row_id": "614",  "query": "Climate Change is a Real Concern", "document": "We cant deny it, its really happening.  #SemST",                                                                                                                    "stance": "FAVOR"},
+  {"row_id": "1699", "query": "Hillary Clinton",                  "document": "Does Hillary really need to run this country? Could we just make her president of the Bingo club at Shady Pines?  #tcot #p2 #SemST",                               "stance": "AGAINST"},
+  {"row_id": "2357", "query": "Legalization of Abortion",         "document": "Tip for protesters everywhere: your goal is to change the minds of rational adults, not to scar the minds of little kids. #PGH #SemST",                             "stance": "NONE"},
+
+  {"row_id": "1014", "query": "Feminist Movement",                "document": "Suns out....  Dresses out...  #StreetHarassment out...  This shouldn't be daily life  #YesAllWomen @EverydaySexism #SemST",                                         "stance": "FAVOR"},
+  {"row_id": "2327", "query": "Legalization of Abortion",         "document": "A person's a person, no matter how small. - Dr. Suess #WAAR #SemST",                                                                                                "stance": "AGAINST"},
+  {"row_id": "156",  "query": "Atheism",                          "document": "The worst day of my life so far is here, setting my Nan to rest. Even as a physicist, times like these make you wonder. #SemST",                                     "stance": "NONE"},
+
+  {"row_id": "2326", "query": "Legalization of Abortion",         "document": "Govt cannot force you to get chemo but if you're a fetus, you must live! #JulieBorowski #reproductiverights #SemST",                                               "stance": "FAVOR"},
+  {"row_id": "693",  "query": "Climate Change is a Real Concern", "document": "Last time I checked, Al Gore is a politician, not a scientist.. #WCS15 #SemST",                                                                                     "stance": "AGAINST"},
+  {"row_id": "1683", "query": "Hillary Clinton",                  "document": "I've made my decision, to the shock of no one probably, who I'm supporting  #SemST",                                                                                "stance": "NONE"}
+]

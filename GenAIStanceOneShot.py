@@ -33,7 +33,7 @@ class GenAIStanceOneShot(StanceDetectionInterface):
             return [self.assign_stance(result) for result in final_results]
 
         prompts = [
-            get_stance_prompt(example["content"], example["query"], self.prompt_name)
+            get_stance_prompt(example["content"], example["query"], self.prompt_name, doc_id=example.get("doc_id"))
             for example in examples
         ]
         results = complete_request(prompts, debug=False)

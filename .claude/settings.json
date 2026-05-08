@@ -7,7 +7,31 @@
       "Bash(wc -l /Users/nityaakalra/Desktop/nyt_topic_modeling/topic_modeling_paper/assignments*.csv)",
       "Bash(python3 -m json.tool)",
       "Bash(python3 -c ':*)",
-      "Bash(python3)"
+      "Bash(python3)",
+      "Bash(python3 -c ' *)",
+      "Bash(python3 -c \"import pandas as pd; df=pd.read_csv\\('/Users/nityaakalra/Desktop/nyt_topic_modeling/topic_modeling_paper/data_in/semeval2016_task6_stance.csv'\\); print\\(df['stance_label'].value_counts\\(\\)\\); print\\(df['query'].unique\\(\\)\\)\")",
+      "Bash(xargs ls *)",
+      "Bash(awk -F',' '{print $8}')",
+      "Bash(awk -F',' '{print $9}')",
+      "WebSearch",
+      "WebFetch(domain:aclrollingreview.org)",
+      "WebFetch(domain:2026.aclweb.org)",
+      "WebFetch(domain:semeval.github.io)",
+      "WebFetch(domain:www.aclweb.org)",
+      "WebFetch(domain:2026.emnlp.org)",
+      "WebFetch(domain:www.conferencedeadlines.com)",
+      "Bash(jupyter nbconvert *)",
+      "Read(//Users/nityaakalra/Desktop/**)",
+      "WebFetch(domain:aclanthology.org)",
+      "WebFetch(domain:www.researchgate.net)",
+      "WebFetch(domain:www.academia.edu)",
+      "WebFetch(domain:scispace.com)",
+      "WebFetch(domain:arxiv.org)",
+      "WebFetch(domain:alt.qcri.org)",
+      "WebFetch(domain:www.svkir.com)",
+      "WebFetch(domain:github.com)",
+      "WebFetch(domain:lsm.media.mit.edu)",
+      "Bash(.venv/bin/python3 -c ' *)"
     ]
   }
 }

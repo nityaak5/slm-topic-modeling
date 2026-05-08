@@ -36,6 +36,8 @@ class StanceDetectionInterface:
         backend = self.config.get("LLM_BACKEND", "vllm")
         if backend == "openai":
             model_name = self.config.get("OPENAI_MODEL", "gpt-3.5-turbo")
+        elif backend in {"claude", "anthropic"}:
+            model_name = self.config.get("CLAUDE_MODEL", "claude-3-5-sonnet-latest")
         else:
             model_name = self.config.get("VLLM_MODEL", "meta-llama/Llama-2-7b-chat-hf")
         return model_name.split("/")[-1].replace(":", "-") if "/" in model_name else model_name.replace(":", "-")
@@ -76,6 +78,7 @@ class StanceDetectionInterface:
             "llm_backend": self.config.get("LLM_BACKEND", "vllm"),
             "vllm_model": self.config.get("VLLM_MODEL", "meta-llama/Llama-2-7b-chat-hf"),
             "openai_model": self.config.get("OPENAI_MODEL", "gpt-3.5-turbo"),
+            "claude_model": self.config.get("CLAUDE_MODEL", "claude-3-5-sonnet-latest"),
             "sampling_method": self.sampling_method,
             "stance_prompt_name": self.prompt_name,
             "carbon_tracking": self.carbon_tracking,
@@ -277,14 +280,23 @@ class StanceDetectionInterface:
                 gpu_stats["runtime_seconds"] = runtime_seconds
 
             openai_usage = None
+            claude_usage = None
             vllm_usage = None
-            if self.config.get("LLM_BACKEND", "vllm").lower() == "openai":
+            backend = self.config.get("LLM_BACKEND", "vllm").lower()
+            if backend == "openai":
                 try:
                     from genai_functions import get_openai_usage
 
                     openai_usage = get_openai_usage()
                 except Exception:
                     openai_usage = None
+            elif backend in {"claude", "anthropic"}:
+                try:
+                    from genai_functions import get_claude_usage
+
+                    claude_usage = get_claude_usage()
+                except Exception:
+                    claude_usage = None
             else:
                 try:
                     from genai_functions import get_vllm_usage
@@ -293,7 +305,7 @@ class StanceDetectionInterface:
                 except Exception:
                     vllm_usage = None
 
-            usage = openai_usage or vllm_usage
+            usage = openai_usage or claude_usage or vllm_usage
             throughput_tokens_per_sec = None
             if usage and runtime_seconds > 0 and usage.get("total_tokens"):
                 throughput_tokens_per_sec = round(usage["total_tokens"] / runtime_seconds, 2)
@@ -309,6 +321,7 @@ class StanceDetectionInterface:
                     "count_failed_parse": failed_parses,
                     "gpu_stats": gpu_stats,
                     "openai_usage": openai_usage,
+                    "claude_usage": claude_usage,
                     "vllm_usage": vllm_usage,
                     "runtime_seconds": runtime_seconds,
                     "throughput_tokens_per_sec": throughput_tokens_per_sec,
@@ -338,7 +351,12 @@ class StanceDetectionInterface:
             )
         except Exception:
             backend = self.config.get("LLM_BACKEND", "vllm")
-            model_name = self.config.get("OPENAI_MODEL", "gpt-3.5-turbo") if backend == "openai" else self.config.get("VLLM_MODEL", "meta-llama/Llama-2-7b-chat-hf")
+            if backend == "openai":
+                model_name = self.config.get("OPENAI_MODEL", "gpt-3.5-turbo")
+            elif backend in {"claude", "anthropic"}:
+                model_name = self.config.get("CLAUDE_MODEL", "claude-3-5-sonnet-latest")
+            else:
+                model_name = self.config.get("VLLM_MODEL", "meta-llama/Llama-2-7b-chat-hf")
             model_limits = {
                 "model_name": model_name,
                 "native_max_context_length": None,

@@ -49,6 +49,11 @@ def main():
         if openai_model == "":
             raise ValueError("openai_model is required when llm_backend=openai")
         cmd.extend(["--set", f"OPENAI_MODEL={openai_model}"])
+    elif llm_backend in {"claude", "anthropic"}:
+        claude_model = str(row.get("claude_model", "")).strip()
+        if claude_model == "":
+            raise ValueError("claude_model is required when llm_backend=claude")
+        cmd.extend(["--set", f"CLAUDE_MODEL={claude_model}"])
     elif llm_backend == "vllm":
         vllm_model = str(row.get("vllm_model", "")).strip()
         if vllm_model == "":
@@ -60,6 +65,20 @@ def main():
             cmd.extend(["--set", f"VLLM_MAX_MODEL_LEN={vllm_max_model_len}"])
     else:
         raise ValueError(f"Unsupported llm_backend: {llm_backend}")
+
+    optional_set_columns = {
+        "n_documents": "N_documents",
+        "n_runs": "N_runs",
+        "sampling_method": "SAMPLING_METHOD",
+        "use_all_documents": "USE_ALL_DOCUMENTS",
+        "claude_batch_size": "CLAUDE_BATCH_SIZE",
+        "claude_batch_sleep_seconds": "CLAUDE_BATCH_SLEEP_SECONDS",
+        "claude_max_tokens": "CLAUDE_MAX_TOKENS",
+    }
+    for csv_column, env_key in optional_set_columns.items():
+        value = row.get(csv_column)
+        if value is not None and str(value).strip() != "":
+            cmd.extend(["--set", f"{env_key}={str(value).strip()}"])
 
     print(" ".join(cmd))
     subprocess.run(cmd, check=True)

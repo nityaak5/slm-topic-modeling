@@ -35,12 +35,14 @@ from vllm import LLM, SamplingParams
 PROJECT_ROOT = Path(__file__).parent
 MODELS_DIR = PROJECT_ROOT / "models"
 SEMEVAL_TRAINING_DEFAULT_PATH = PROJECT_ROOT / "data_in" / "semeval2016-task6-trainingdata.txt"
-FEW_SHOT_EXAMPLES_MASTER_PATH = PROJECT_ROOT / "few_shot_examples_master.json"
+FEW_SHOT_EXAMPLES_MASTER_PATH = PROJECT_ROOT / "master.json"
+SEMANTIC_ICL_DIR = PROJECT_ROOT / "data_in" / "semantic_icl"
 FEW_SHOT_EXAMPLES_BY_SHOT = {
-    3: PROJECT_ROOT / "few_shot_examples_3.json",
-    6: PROJECT_ROOT / "few_shot_examples_6.json",
-    9: PROJECT_ROOT / "few_shot_examples_9.json",
-    12: PROJECT_ROOT / "few_shot_examples_12.json",
+    3: None,
+    6: None,
+    9: None,
+    12: None,
+    15: None,
 }
 
 _PREFERRED_FEW_SHOT_IDS = {
@@ -56,6 +58,7 @@ _COLUMN_ALIASES = {
     "stance": ("stance", "label", "stance_label", "stance_label_original"),
 }
 _FEW_SHOT_EXAMPLE_SETS_CACHE = None
+_SEMANTIC_ICL_CACHE = {}  # keyed by num_shots
 
 # Set HuggingFace cache to use our models directory
 if "HF_HOME" not in os.environ:
@@ -161,16 +164,16 @@ def get_tokenizer_for_filtering(model_name="gpt-3.5-turbo"):
 
 
 def get_tokenizer_for_chunking():
-    """Tokenizer for chunking: vLLM uses HF tokenizer, OpenAI uses tiktoken. Does not load vLLM when backend is openai."""
+    """Tokenizer for chunking: vLLM uses HF tokenizer, hosted APIs use tiktoken fallback."""
     llm_backend = os.getenv("LLM_BACKEND", "vllm").lower()
-    if llm_backend == "openai":
+    if llm_backend in {"openai", "claude", "anthropic"}:
         try:
             import tiktoken
         except ImportError:
-            raise ImportError("tiktoken is required for OpenAI backend. Install with: pip install tiktoken")
-        openai_model = os.getenv("OPENAI_MODEL", "gpt-3.5-turbo")
+            raise ImportError("tiktoken is required for hosted API backends. Install with: pip install tiktoken")
+        model_name = os.getenv("OPENAI_MODEL", "gpt-3.5-turbo") if llm_backend == "openai" else os.getenv("CLAUDE_MODEL", "claude-3-5-sonnet-latest")
         try:
-            enc = tiktoken.encoding_for_model(openai_model)
+            enc = tiktoken.encoding_for_model(model_name)
         except KeyError:
             enc = tiktoken.get_encoding("cl100k_base")
         class _TiktokenWrapper:
@@ -491,19 +494,20 @@ def _few_shot_example_sort_key(example, rng):
 
 
 def build_nested_few_shot_sets(master_examples):
-    if len(master_examples) != 12:
-        raise ValueError("The master few-shot pool must contain exactly 12 examples.")
+    if len(master_examples) % 3 != 0:
+        raise ValueError("The master few-shot pool size must be divisible by 3.")
     grouped = {"FAVOR": [], "AGAINST": [], "NONE": []}
     for example in master_examples:
         grouped[example["stance"]].append(example)
+    shots_per_label = len(master_examples) // 3
     for stance, items in grouped.items():
-        if len(items) != 4:
-            raise ValueError(f"Expected 4 {stance} examples, found {len(items)}.")
+        if len(items) != shots_per_label:
+            raise ValueError(f"Expected {shots_per_label} {stance} examples, found {len(items)}.")
 
     nested_sets = {}
-    for shots_per_label in range(1, 5):
+    for examples_per_label in range(1, shots_per_label + 1):
         examples = []
-        for index in range(shots_per_label):
+        for index in range(examples_per_label):
             examples.extend(
                 [
                     grouped["FAVOR"][index],
@@ -511,8 +515,8 @@ def build_nested_few_shot_sets(master_examples):
                     grouped["NONE"][index],
                 ]
             )
-        nested_sets[shots_per_label * 3] = examples
-    nested_sets["master"] = nested_sets[12]
+        nested_sets[examples_per_label * 3] = examples
+    nested_sets["master"] = list(master_examples)
     return nested_sets
 
 
@@ -544,11 +548,11 @@ def select_few_shot_examples(train_examples, seed=_DEFAULT_FEW_SHOT_SEED):
         key=lambda example: _few_shot_example_sort_key(example, rng),
     )
 
-    while len(examples_by_stance["NONE"]) < 4 and neutral_on_topic:
+    while len(examples_by_stance["NONE"]) < 5 and neutral_on_topic:
         example = neutral_on_topic.pop(0)
         examples_by_stance["NONE"].append(example)
         used_ids.add(example["row_id"])
-    while len(examples_by_stance["NONE"]) < 4 and neutral_off_topic:
+    while len(examples_by_stance["NONE"]) < 5 and neutral_off_topic:
         example = neutral_off_topic.pop(0)
         examples_by_stance["NONE"].append(example)
         used_ids.add(example["row_id"])
@@ -562,17 +566,17 @@ def select_few_shot_examples(train_examples, seed=_DEFAULT_FEW_SHOT_SEED):
             ],
             key=lambda example: _few_shot_example_sort_key(example, rng),
         )
-        while len(examples_by_stance[stance]) < 4 and candidates:
+        while len(examples_by_stance[stance]) < 5 and candidates:
             example = candidates.pop(0)
             examples_by_stance[stance].append(example)
             used_ids.add(example["row_id"])
 
     for stance, items in examples_by_stance.items():
-        if len(items) < 4:
-            raise ValueError(f"Unable to select 4 clean {stance} training examples.")
+        if len(items) < 5:
+            raise ValueError(f"Unable to select 5 clean {stance} training examples.")
 
     master_examples = []
-    for index in range(4):
+    for index in range(5):
         master_examples.extend(
             [
                 examples_by_stance["FAVOR"][index],
@@ -600,25 +604,11 @@ def save_few_shot_example_sets(train_path=SEMEVAL_TRAINING_DEFAULT_PATH, output_
     output_dir = Path(output_dir)
     output_dir.mkdir(parents=True, exist_ok=True)
 
-    files = {"master": output_dir / FEW_SHOT_EXAMPLES_MASTER_PATH.name}
-    for shots, path in FEW_SHOT_EXAMPLES_BY_SHOT.items():
-        files[shots] = output_dir / path.name
-
-    for key, path in files.items():
-        with path.open("w", encoding="utf-8") as handle:
-            json.dump(example_sets[key], handle, indent=2, ensure_ascii=False)
-            handle.write("\n")
-    return files
-
-
-def _load_saved_few_shot_example_sets():
-    example_sets = {}
-    with FEW_SHOT_EXAMPLES_MASTER_PATH.open("r", encoding="utf-8") as handle:
-        example_sets["master"] = json.load(handle)
-    for shots, path in FEW_SHOT_EXAMPLES_BY_SHOT.items():
-        with path.open("r", encoding="utf-8") as handle:
-            example_sets[shots] = json.load(handle)
-    return example_sets
+    master_path = output_dir / FEW_SHOT_EXAMPLES_MASTER_PATH.name
+    with master_path.open("w", encoding="utf-8") as handle:
+        json.dump(example_sets["master"], handle, indent=2, ensure_ascii=False)
+        handle.write("\n")
+    return {"master": master_path}
 
 
 def get_few_shot_example_sets(train_path=SEMEVAL_TRAINING_DEFAULT_PATH, seed=_DEFAULT_FEW_SHOT_SEED):
@@ -626,9 +616,9 @@ def get_few_shot_example_sets(train_path=SEMEVAL_TRAINING_DEFAULT_PATH, seed=_DE
     if _FEW_SHOT_EXAMPLE_SETS_CACHE is not None:
         return _FEW_SHOT_EXAMPLE_SETS_CACHE
 
-    expected_paths = [FEW_SHOT_EXAMPLES_MASTER_PATH, *FEW_SHOT_EXAMPLES_BY_SHOT.values()]
-    if all(path.exists() for path in expected_paths):
-        _FEW_SHOT_EXAMPLE_SETS_CACHE = _load_saved_few_shot_example_sets()
+    if FEW_SHOT_EXAMPLES_MASTER_PATH.exists():
+        with FEW_SHOT_EXAMPLES_MASTER_PATH.open("r", encoding="utf-8") as handle:
+            _FEW_SHOT_EXAMPLE_SETS_CACHE = build_nested_few_shot_sets(json.load(handle))
     else:
         _FEW_SHOT_EXAMPLE_SETS_CACHE = select_few_shot_examples(
             load_semeval_training_examples(train_path),
@@ -812,6 +802,45 @@ def stance_classification_few_shot_12_prompt(content, query):
     return stance_classification_few_shot_prompt(content, query, examples=get_few_shot_examples(12))
 
 
+def stance_classification_few_shot_15_prompt(content, query):
+    return stance_classification_few_shot_prompt(content, query, examples=get_few_shot_examples(15))
+
+
+def get_semantic_icl_examples(num_shots, doc_id):
+    global _SEMANTIC_ICL_CACHE
+    if num_shots not in _SEMANTIC_ICL_CACHE:
+        path = SEMANTIC_ICL_DIR / f"retrieved_examples_{num_shots}.json"
+        with open(path, "r", encoding="utf-8") as f:
+            _SEMANTIC_ICL_CACHE[num_shots] = json.load(f)
+    raw = _SEMANTIC_ICL_CACHE[num_shots][str(doc_id)]
+    return [{"query": ex["query"], "document": ex["content"], "stance": ex["stance_label"].upper()} for ex in raw]
+
+
+def stance_classification_semantic_icl_prompt(content, query, doc_id, num_shots=3):
+    examples = get_semantic_icl_examples(num_shots, doc_id)
+    return stance_classification_few_shot_prompt(content, query, examples=examples)
+
+
+def stance_classification_semantic_icl_3_prompt(content, query, doc_id):
+    return stance_classification_semantic_icl_prompt(content, query, doc_id, num_shots=3)
+
+
+def stance_classification_semantic_icl_6_prompt(content, query, doc_id):
+    return stance_classification_semantic_icl_prompt(content, query, doc_id, num_shots=6)
+
+
+def stance_classification_semantic_icl_9_prompt(content, query, doc_id):
+    return stance_classification_semantic_icl_prompt(content, query, doc_id, num_shots=9)
+
+
+def stance_classification_semantic_icl_12_prompt(content, query, doc_id):
+    return stance_classification_semantic_icl_prompt(content, query, doc_id, num_shots=12)
+
+
+def stance_classification_semantic_icl_15_prompt(content, query, doc_id):
+    return stance_classification_semantic_icl_prompt(content, query, doc_id, num_shots=15)
+
+
 def stance_classification_question_prompt(content, query):
     
     prompt = (
@@ -874,7 +903,7 @@ def stance_zero_shot_cot_prompt(content, query, stance_reason=None):
     return prompt
 
 
-def get_stance_prompt(content, query, prompt_name="default", stance_reason=None):
+def get_stance_prompt(content, query, prompt_name="default", stance_reason=None, doc_id=None):
     prompt_builders = {
         # Prompt A: simple instruction
         "default": stance_classification_prompt,
@@ -884,12 +913,19 @@ def get_stance_prompt(content, query, prompt_name="default", stance_reason=None)
         "task_definition": stance_classification_task_definition,
         # Experiment 2: task definition + 5-point stance score
         "task_definition_scale": stance_classification_task_definition_scale_prompt,
-        # Prompt D: few-shot
+        # Prompt D: few-shot (random)
         "few_shot": stance_classification_few_shot_prompt,
         "few_shot_3": stance_classification_few_shot_3_prompt,
         "few_shot_6": stance_classification_few_shot_6_prompt,
         "few_shot_9": stance_classification_few_shot_9_prompt,
         "few_shot_12": stance_classification_few_shot_12_prompt,
+        "few_shot_15": stance_classification_few_shot_15_prompt,
+        # Prompt D-sem: few-shot (semantic ICL — cosine similarity retrieval)
+        "semantic_icl_3": stance_classification_semantic_icl_3_prompt,
+        "semantic_icl_6": stance_classification_semantic_icl_6_prompt,
+        "semantic_icl_9": stance_classification_semantic_icl_9_prompt,
+        "semantic_icl_12": stance_classification_semantic_icl_12_prompt,
+        "semantic_icl_15": stance_classification_semantic_icl_15_prompt,
         # Prompt E: question framing
         "question": stance_classification_question_prompt,
         # Prompt C: CoT (executed as 2-step flow in GenAIStanceOneShot)
@@ -901,6 +937,8 @@ def get_stance_prompt(content, query, prompt_name="default", stance_reason=None)
         )
     if prompt_name == "cot":
         return prompt_builders[prompt_name](content, query, stance_reason=stance_reason)
+    if prompt_name.startswith("semantic_icl"):
+        return prompt_builders[prompt_name](content, query, doc_id)
     return prompt_builders[prompt_name](content, query)
 
 
@@ -932,6 +970,12 @@ def complete_request(
         if len(prompt_list) > 1:
             return complete_openai_request_parralel(prompt_list, model=openai_model, timeout=30, batch_size=100, logprobs=False)
         return complete_openai_request(prompt_list[0], model=openai_model, timeout=30, temperature=temperature)
+    if llm_backend in {"claude", "anthropic"}:
+        claude_model = os.getenv("CLAUDE_MODEL", "claude-3-5-sonnet-latest")
+        claude_batch_size = int(os.getenv("CLAUDE_BATCH_SIZE", "1"))
+        if len(prompt_list) > 1:
+            return complete_claude_request_parallel(prompt_list, model=claude_model, timeout=30, batch_size=claude_batch_size)
+        return complete_claude_request(prompt_list[0], model=claude_model, timeout=30, temperature=temperature)
 
     # vLLM path
     llm = get_llm()
@@ -1011,6 +1055,9 @@ def complete_request(
 # Accumulate OpenAI token usage per run (reset by get_openai_usage())
 _openai_usage_tracker = {"prompt_tokens": 0, "completion_tokens": 0, "total_tokens": 0}
 
+# Accumulate Claude token usage per run (reset by get_claude_usage())
+_claude_usage_tracker = {"prompt_tokens": 0, "completion_tokens": 0, "total_tokens": 0}
+
 # Accumulate vLLM token usage per run (reset by get_vllm_usage())
 _vllm_usage_tracker = {"prompt_tokens": 0, "completion_tokens": 0, "total_tokens": 0}
 
@@ -1034,6 +1081,27 @@ def get_openai_usage():
     _openai_usage_tracker["prompt_tokens"] = 0
     _openai_usage_tracker["completion_tokens"] = 0
     _openai_usage_tracker["total_tokens"] = 0
+    return out
+
+
+def _add_claude_usage(usage):
+    """Add Anthropic/Claude usage dict to tracker."""
+    if not usage or not isinstance(usage, dict):
+        return
+    pt = usage.get("input_tokens", 0) or usage.get("prompt_tokens", 0)
+    ct = usage.get("output_tokens", 0) or usage.get("completion_tokens", 0)
+    tt = usage.get("total_tokens", 0) or (pt + ct)
+    _claude_usage_tracker["prompt_tokens"] += pt
+    _claude_usage_tracker["completion_tokens"] += ct
+    _claude_usage_tracker["total_tokens"] += tt
+
+
+def get_claude_usage():
+    """Return current Claude usage for this run and reset the tracker."""
+    out = dict(_claude_usage_tracker)
+    _claude_usage_tracker["prompt_tokens"] = 0
+    _claude_usage_tracker["completion_tokens"] = 0
+    _claude_usage_tracker["total_tokens"] = 0
     return out
 
 
@@ -1191,6 +1259,121 @@ def complete_openai_request_parralel(
     return responses
 
 
+def complete_claude_request(prompt, model="claude-3-5-sonnet-latest", timeout=30, temperature=0):
+    """Single-prompt Claude request. Uses env ANTHROPIC_API_KEY."""
+    import requests
+
+    api_key = os.getenv("ANTHROPIC_API_KEY")
+    if not api_key:
+        raise ValueError("ANTHROPIC_API_KEY environment variable not set.")
+
+    max_tokens = int(os.getenv("CLAUDE_MAX_TOKENS", "256"))
+    headers = {
+        "x-api-key": api_key,
+        "anthropic-version": "2023-06-01",
+        "content-type": "application/json",
+    }
+    data = {
+        "model": model,
+        "system": "You are a helpful assistant designed to output JSON. Return only valid JSON.",
+        "messages": [{"role": "user", "content": prompt}],
+        "max_tokens": max_tokens,
+    }
+    if temperature > 0:
+        data["temperature"] = temperature
+
+    response = requests.post(
+        "https://api.anthropic.com/v1/messages",
+        headers=headers,
+        json=data,
+        timeout=timeout,
+    )
+    response.raise_for_status()
+    response_json = response.json()
+    if "usage" in response_json:
+        _add_claude_usage(response_json["usage"])
+
+    text_blocks = [
+        block.get("text", "")
+        for block in response_json.get("content", [])
+        if isinstance(block, dict) and block.get("type") == "text"
+    ]
+    raw_content = "\n".join(block for block in text_blocks if block).strip()
+    json_dict = _parse_json_response(raw_content, strict=False)
+    if json_dict is None and raw_content:
+        raise ValueError(f"Claude model returned non-JSON content: {raw_content[:500]!r}")
+    return json_dict
+
+
+async def complete_claude_request_http(session, prompt, model, timeout):
+    """Async single Claude request via aiohttp. Uses env ANTHROPIC_API_KEY."""
+    import aiohttp
+
+    api_key = os.getenv("ANTHROPIC_API_KEY")
+    max_tokens = int(os.getenv("CLAUDE_MAX_TOKENS", "256"))
+    headers = {
+        "x-api-key": api_key,
+        "anthropic-version": "2023-06-01",
+        "content-type": "application/json",
+    }
+    data = {
+        "model": model,
+        "system": "You are a helpful assistant designed to output JSON. Return only valid JSON.",
+        "messages": [{"role": "user", "content": prompt}],
+        "max_tokens": max_tokens,
+    }
+    timeout_obj = aiohttp.ClientTimeout(total=timeout)
+    async with session.post(
+        "https://api.anthropic.com/v1/messages",
+        headers=headers,
+        json=data,
+        timeout=timeout_obj,
+    ) as response:
+        if response.status != 200:
+            print(await response.text())
+            print(prompt[:200])
+            response.raise_for_status()
+        response_json = await response.json()
+        if "usage" in response_json:
+            _add_claude_usage(response_json["usage"])
+
+        text_blocks = [
+            block.get("text", "")
+            for block in response_json.get("content", [])
+            if isinstance(block, dict) and block.get("type") == "text"
+        ]
+        raw_content = "\n".join(block for block in text_blocks if block).strip()
+        return _parse_json_response(raw_content, strict=False)
+
+
+def complete_claude_request_parallel(
+    prompts, model="claude-3-5-sonnet-latest", timeout=30, batch_size=100
+):
+    """Parallel Claude requests. Uses env ANTHROPIC_API_KEY."""
+
+    async def parallel_claude_requests(prompts, model, timeout, batch_size):
+        import aiohttp
+        batch_sleep_seconds = float(os.getenv("CLAUDE_BATCH_SLEEP_SECONDS", "12"))
+
+        async with aiohttp.ClientSession() as session:
+            tasks = [
+                complete_claude_request_http(session, prompt, model, timeout)
+                for prompt in prompts
+            ]
+            all_objects = []
+            for i in range(0, len(tasks), batch_size):
+                responses = await asyncio.gather(
+                    *tasks[i:i + batch_size], return_exceptions=True
+                )
+                for response in responses:
+                    all_objects.append(None if isinstance(response, Exception) else response)
+                if i + batch_size < len(tasks):
+                    await asyncio.sleep(batch_sleep_seconds)
+            return all_objects
+
+    return asyncio.run(parallel_claude_requests(prompts, model, timeout, batch_size))
+
+
 def get_model_limits(token_limit=None, require_llm=True, model_name_for_summary=None):
     """Get model limits information. When require_llm=False (e.g. BERTopic/NMF/LDA), returns a stub without loading the LLM.
     model_name_for_summary: used as model_name in the returned dict when require_llm=False (e.g. embedding model or method tag)."""
@@ -1215,6 +1398,30 @@ def get_model_limits(token_limit=None, require_llm=True, model_name_for_summary=
                 break
         if native_max_len is None:
             native_max_len = 128000  # default for newer models
+        return {
+            "model_name": model_name,
+            "native_max_context_length": native_max_len,
+            "configured_max_model_len": native_max_len,
+            "token_limit_chunking": token_limit_val,
+            "max_tokens_generation": 2000
+        }
+    if llm_backend in {"claude", "anthropic"}:
+        model_name = os.getenv("CLAUDE_MODEL", "claude-3-5-sonnet-latest")
+        claude_limits = {
+            "claude-3-5-sonnet": 200000,
+            "claude-3-5-haiku": 200000,
+            "claude-3-7-sonnet": 200000,
+            "claude-sonnet-4": 200000,
+            "claude-opus-4": 200000,
+        }
+        native_max_len = None
+        lowered = model_name.lower()
+        for key, limit in claude_limits.items():
+            if key in lowered:
+                native_max_len = limit
+                break
+        if native_max_len is None:
+            native_max_len = 200000
         return {
             "model_name": model_name,
             "native_max_context_length": native_max_len,
