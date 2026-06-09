@@ -191,7 +191,7 @@ class StanceDetectionInterface:
             self.config.get("CATEGORY_COLUMN"),
         )
 
-        output_dir = Path(self.config.get("OUTPUT_DIR", "data_out"))
+        output_dir = Path(self.config.get("OUTPUT_DIR", "data_out/stance"))
         output_dir.mkdir(parents=True, exist_ok=True)
         dataset_name = dataset_path.stem
         output_dir_for_dataset = output_dir / dataset_name

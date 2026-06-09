@@ -1,0 +1,92 @@
+[
+  {
+    "row_id": "31",
+    "query": "Biden",
+    "stance": "FAVOR",
+    "document": "I mean Biden has been in Congress since the 70s. He's probably seen more than his fair share of flash in the pan freshman reps."
+  },
+  {
+    "row_id": "10214",
+    "query": "Trump",
+    "stance": "AGAINST",
+    "document": "I remember arguing with my mom and telling her, \"He will either destroy our country or the Republican party. Those are the only two outcomes.\""
+  },
+  {
+    "row_id": "6088",
+    "query": "SpaceX",
+    "stance": "NONE",
+    "document": "Unfortunately for NASA the people that control their budget would probably freak out if they were blowing up rockets constantly as part of their testing."
+  },
+  {
+    "row_id": "2795",
+    "query": "Bitcoin",
+    "stance": "FAVOR",
+    "document": "I bought 0.1 bitcoin at \u00a3150 each years ago. I'm not selling, as far as I'm concerned it's really interesting technology that's not going away."
+  },
+  {
+    "row_id": "2577",
+    "query": "Bitcoin",
+    "stance": "AGAINST",
+    "document": "It's a perpetual Ponzi scheme. It can collapse over and over, but there's no business to go under and no orchestrator to go to jail."
+  },
+  {
+    "row_id": "2463",
+    "query": "Bitcoin",
+    "stance": "NONE",
+    "document": "Banano is a cryptocurrency which does basically this. I don't remember if it actually uses F@H or something similar though. It's a pretty unknown coin though"
+  },
+  {
+    "row_id": "5739",
+    "query": "SpaceX",
+    "stance": "FAVOR",
+    "document": "No joke. Every single time I watch a landing I think, 'that's exactly how a spaceship in a movie would land'. Is this real life?"
+  },
+  {
+    "row_id": "5260",
+    "query": "SpaceX",
+    "stance": "AGAINST",
+    "document": "all I know is NASA hasn't blown up a rocket in decades. Why we're starting over from scratch making all new mistakes is beyond me."
+  },
+  {
+    "row_id": "7344",
+    "query": "Tesla",
+    "stance": "NONE",
+    "document": "That looks like such an ungodly public expenditure expense for something that \"ought not happen\" :/ Literally nearly needing at least one of these \"per city\""
+  },
+  {
+    "row_id": "8055",
+    "query": "Tesla",
+    "stance": "FAVOR",
+    "document": "Tesla's system is more technologically in-line with self driving via their system of neural networks and machine learning. BMW's system is just a glorified lane finder."
+  },
+  {
+    "row_id": "7424",
+    "query": "Tesla",
+    "stance": "AGAINST",
+    "document": "Tesla doesn't do body work.. you have to go to a certified shop. Takes forever to get parts.. I've been waiting 4 weeks now.. sigh"
+  },
+  {
+    "row_id": "480",
+    "query": "Biden",
+    "stance": "NONE",
+    "document": "How is that even possible? I'm not American, how do you owe more than when you got the loan, 10 years after you got it?"
+  },
+  {
+    "row_id": "10019",
+    "query": "Trump",
+    "stance": "FAVOR",
+    "document": "thanks for ripping off the scab. Everything he said during that press conference seemed totally reasonable to me, and time has just bolstered my feeling that the democrats totally cheated, and that was a juiced election if I ever saw one."
+  },
+  {
+    "row_id": "125",
+    "query": "Biden",
+    "stance": "AGAINST",
+    "document": "Children? The democrats literally creates a lie about Russia to impeach Trump because he didn't stand for their bullshit. Sounds like a bunch of lying babies if you as me."
+  },
+  {
+    "row_id": "10764",
+    "query": "Trump",
+    "stance": "NONE",
+    "document": "A group of high schoolers in Tulsa ditched class to sneak into a Trump rally and get this pic taken before being swiftly escorted out."
+  }
+]

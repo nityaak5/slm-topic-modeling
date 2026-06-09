@@ -21,7 +21,7 @@ def add_optional_arg(cmd, flag, value):
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("exp_id")
-    parser.add_argument("--csv", default="assignments.csv")
+    parser.add_argument("--csv", default="assignments/assignments.csv")
     args = parser.parse_args()
 
     row = get_row_by_exp_id(args.csv, args.exp_id)
@@ -74,6 +74,7 @@ def main():
         "claude_batch_size": "CLAUDE_BATCH_SIZE",
         "claude_batch_sleep_seconds": "CLAUDE_BATCH_SLEEP_SECONDS",
         "claude_max_tokens": "CLAUDE_MAX_TOKENS",
+        "few_shot_master_path": "FEW_SHOT_MASTER_PATH",
     }
     for csv_column, env_key in optional_set_columns.items():
         value = row.get(csv_column)

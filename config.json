@@ -17,7 +17,6 @@
   "OPENAI_MODEL": "gpt-4o",
   "CLAUDE_MODEL": "claude-3-5-haiku-latest",
   "MODELS_DIR": "models",
-  "OUTPUT_DIR": "data_out",
   "METADATA_PATH": null,
   "SAMPLING_METHOD": "equal",
   "CARBON_TRACKING": true,

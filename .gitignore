@@ -180,3 +180,6 @@ data_output/*
 __pycache__/
 *.pyc
 *.pyo
+
+# Claude Code settings
+.claude/

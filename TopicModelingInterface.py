@@ -133,7 +133,7 @@ class TopicModelingInterface:
                 os.environ[key] = str(value)
 
         random.seed(self.seed)
-        output_dir = Path(self.config.get("OUTPUT_DIR", "data_out"))
+        output_dir = Path(self.config.get("OUTPUT_DIR", "data_out/topic_modeling"))
         output_dir.mkdir(parents=True, exist_ok=True)
 
         score_df = []

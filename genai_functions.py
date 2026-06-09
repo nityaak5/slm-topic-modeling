@@ -36,6 +36,7 @@ PROJECT_ROOT = Path(__file__).parent
 MODELS_DIR = PROJECT_ROOT / "models"
 SEMEVAL_TRAINING_DEFAULT_PATH = PROJECT_ROOT / "data_in" / "semeval2016-task6-trainingdata.txt"
 FEW_SHOT_EXAMPLES_MASTER_PATH = PROJECT_ROOT / "master.json"
+EZSTANCE_FEW_SHOT_MASTER_PATH = PROJECT_ROOT / "data_in" / "ezstance_icl_master.json"
 SEMANTIC_ICL_DIR = PROJECT_ROOT / "data_in" / "semantic_icl"
 FEW_SHOT_EXAMPLES_BY_SHOT = {
     3: None,
@@ -616,8 +617,12 @@ def get_few_shot_example_sets(train_path=SEMEVAL_TRAINING_DEFAULT_PATH, seed=_DE
     if _FEW_SHOT_EXAMPLE_SETS_CACHE is not None:
         return _FEW_SHOT_EXAMPLE_SETS_CACHE
 
-    if FEW_SHOT_EXAMPLES_MASTER_PATH.exists():
-        with FEW_SHOT_EXAMPLES_MASTER_PATH.open("r", encoding="utf-8") as handle:
+    # FEW_SHOT_MASTER_PATH env var overrides the default master (e.g. for EZStance ICL)
+    env_override = os.environ.get("FEW_SHOT_MASTER_PATH")
+    master_path = Path(env_override) if env_override else FEW_SHOT_EXAMPLES_MASTER_PATH
+
+    if master_path.exists():
+        with master_path.open("r", encoding="utf-8") as handle:
             _FEW_SHOT_EXAMPLE_SETS_CACHE = build_nested_few_shot_sets(json.load(handle))
     else:
         _FEW_SHOT_EXAMPLE_SETS_CACHE = select_few_shot_examples(
