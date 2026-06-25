@@ -1,4 +1,4 @@
-### This repository is built on work from : https://github.com/ICascha/topic_modeling_paper and https://github.com/ijcruic/LLM-Stance-Labeling/tree/main. It consists of 2 separte use cases of language models: Topic modeling and Stance detection. 
+### This repository is built on work from : https://github.com/ICascha/topic_modeling_paper and https://github.com/ijcruic/LLM-Stance-Labeling/tree/main. It consists of 2 use cases of language models: Topic modeling and Stance detection. 
 
 
 
