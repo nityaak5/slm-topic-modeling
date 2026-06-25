@@ -1,0 +1,67 @@
+{
+  "experiment_metadata": {
+    "timestamp": "2026-06-11T15:31:43.170518",
+    "method": "GenAIStanceOneShot",
+    "total_runs": 1
+  },
+  "configuration": {
+    "dataset": "GENERIC",
+    "n_documents": 2814,
+    "n_runs": 1,
+    "seed": 44,
+    "token_limit": 6000,
+    "task_type": "stance_detection",
+    "query_column": "query",
+    "llm_backend": "vllm",
+    "vllm_model": "Qwen/Qwen3-1.7B",
+    "openai_model": "gpt-4o",
+    "sampling_method": "equal",
+    "stance_prompt_name": "task_definition_scale",
+    "carbon_tracking": true,
+    "co2_per_km_g": 120.0,
+    "output_dir": "data_out/scale_prompt_rerun/semeval_data"
+  },
+  "model_limits": {
+    "model_name": "Qwen/Qwen3-1.7B",
+    "native_max_context_length": 40960,
+    "configured_max_model_len": 40960,
+    "token_limit_chunking": 6000,
+    "max_tokens_generation": 2000
+  },
+  "runs": [
+    {
+      "run_number": 0,
+      "num_examples": 2814,
+      "labels_returned": 2814,
+      "count_favor": 352,
+      "count_against": 1177,
+      "count_none": 1284,
+      "count_failed_parse": 1,
+      "gpu_stats": {
+        "gpu_id": 0,
+        "gpu_name": "NVIDIA H100 NVL",
+        "memory_used_mb": 58655,
+        "memory_total_mb": 95830,
+        "memory_utilization_percent": 61.21,
+        "runtime_seconds": 42
+      },
+      "openai_usage": null,
+      "vllm_usage": {
+        "prompt_tokens": 801463,
+        "completion_tokens": 163314,
+        "total_tokens": 964777
+      },
+      "runtime_seconds": 42,
+      "throughput_tokens_per_sec": 22970.88
+    }
+  ],
+  "carbon_tracking_total": {
+    "log_dir": "data_out/scale_prompt_rerun/semeval_data/GenAIStanceOneShot_2814_semeval_data_Qwen3-1.7B_equal_task_definition_scale/carbontracker",
+    "note": "See carbontracker logs above (stdout) or in log_dir for actual consumption (time, energy, CO2eq)."
+  },
+  "output_files": {
+    "document_assignments": "document_assignments.csv",
+    "summary": "summary.json",
+    "carbontracker": "carbontracker/"
+  }
+}

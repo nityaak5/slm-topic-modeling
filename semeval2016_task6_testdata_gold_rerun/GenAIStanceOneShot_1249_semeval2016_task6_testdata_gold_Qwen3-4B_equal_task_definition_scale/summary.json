@@ -1,0 +1,67 @@
+{
+  "experiment_metadata": {
+    "timestamp": "2026-06-12T14:09:34.327767",
+    "method": "GenAIStanceOneShot",
+    "total_runs": 1
+  },
+  "configuration": {
+    "dataset": "GENERIC",
+    "n_documents": 1249,
+    "n_runs": 1,
+    "seed": 44,
+    "token_limit": 6000,
+    "task_type": "stance_detection",
+    "query_column": "query",
+    "llm_backend": "vllm",
+    "vllm_model": "Qwen/Qwen3-4B",
+    "openai_model": "gpt-4o",
+    "sampling_method": "equal",
+    "stance_prompt_name": "task_definition_scale",
+    "carbon_tracking": true,
+    "co2_per_km_g": 120.0,
+    "output_dir": "data_out/scale_prompt_rerun/semeval2016_task6_testdata_gold"
+  },
+  "model_limits": {
+    "model_name": "Qwen/Qwen3-4B",
+    "native_max_context_length": 40960,
+    "configured_max_model_len": 40960,
+    "token_limit_chunking": 6000,
+    "max_tokens_generation": 2000
+  },
+  "runs": [
+    {
+      "run_number": 0,
+      "num_examples": 1249,
+      "labels_returned": 1249,
+      "count_favor": 295,
+      "count_against": 445,
+      "count_none": 498,
+      "count_failed_parse": 11,
+      "gpu_stats": {
+        "gpu_id": 1,
+        "gpu_name": "NVIDIA H100 NVL",
+        "memory_used_mb": 58579,
+        "memory_total_mb": 95830,
+        "memory_utilization_percent": 61.13,
+        "runtime_seconds": 168
+      },
+      "openai_usage": null,
+      "vllm_usage": {
+        "prompt_tokens": 356099,
+        "completion_tokens": 637996,
+        "total_tokens": 994095
+      },
+      "runtime_seconds": 168,
+      "throughput_tokens_per_sec": 5917.23
+    }
+  ],
+  "carbon_tracking_total": {
+    "log_dir": "data_out/scale_prompt_rerun/semeval2016_task6_testdata_gold/GenAIStanceOneShot_1249_semeval2016_task6_testdata_gold_Qwen3-4B_equal_task_definition_scale/carbontracker",
+    "note": "See carbontracker logs above (stdout) or in log_dir for actual consumption (time, energy, CO2eq)."
+  },
+  "output_files": {
+    "document_assignments": "document_assignments.csv",
+    "summary": "summary.json",
+    "carbontracker": "carbontracker/"
+  }
+}

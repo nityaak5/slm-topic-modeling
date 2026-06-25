@@ -1,0 +1,7 @@
+exp_id,llm_backend,openai_model,claude_model,vllm_model,vllm_max_model_len,task_type,method_type,prompt_name,custom_dataset,text_column,query_column,category_column,n_documents,n_runs,sampling_method,use_all_documents,claude_batch_size,claude_batch_sleep_seconds,claude_max_tokens,few_shot_master_path
+1,claude,,claude-haiku-4-5-20251001,,,stance_detection,GenAIStanceOneShot,default,data_in/semeval/semeval2016_task6_testdata_gold,content,query,stance_label,1249,1,equal,true,5,10,256,
+2,claude,,claude-haiku-4-5-20251001,,,stance_detection,GenAIStanceOneShot,default_no_label_definitions,data_in/semeval/semeval2016_task6_testdata_gold,content,query,stance_label,1249,1,equal,true,5,10,256,
+3,claude,,claude-haiku-4-5-20251001,,,stance_detection,GenAIStanceOneShot,question,data_in/semeval/semeval2016_task6_testdata_gold,content,query,stance_label,1249,1,equal,true,5,10,256,
+4,claude,,claude-haiku-4-5-20251001,,,stance_detection,GenAIStanceOneShot,cot,data_in/semeval/semeval2016_task6_testdata_gold,content,query,stance_label,1249,1,equal,true,5,10,256,
+5,claude,,claude-haiku-4-5-20251001,,,stance_detection,GenAIStanceOneShot,task_definition,data_in/semeval/semeval2016_task6_testdata_gold,content,query,stance_label,1249,1,equal,true,5,10,256,
+6,claude,,claude-haiku-4-5-20251001,,,stance_detection,GenAIStanceOneShot,task_definition_scale,data_in/semeval/semeval2016_task6_testdata_gold,content,query,stance_label,1249,1,equal,true,5,10,256,

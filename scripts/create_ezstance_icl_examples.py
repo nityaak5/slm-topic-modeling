@@ -15,7 +15,7 @@ import os
 import csv
 
 BASE = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-TRAIN_PATH = os.path.join(BASE, "ezstance", "subtaskA", "noun_phrase", "raw_train_all_onecol.csv")
+TRAIN_PATH = os.path.join(BASE, "data_in", "raw", "ezstance", "subtaskA", "noun_phrase", "raw_train_all_onecol.csv")
 OUT_PATH = os.path.join(BASE, "data_in", "ezstance", "ezstance_icl_master.json")
 
 SEED = 42

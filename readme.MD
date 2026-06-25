@@ -1,6 +1,6 @@
-### Code for the experiments, from : https://github.com/ICascha/topic_modeling_paper
+### This repository is built on work from : https://github.com/ICascha/topic_modeling_paper and https://github.com/ijcruic/LLM-Stance-Labeling/tree/main. It consists of 2 separte use cases of language models: Topic modeling and Stance detection. 
 
-In the results, each technique implements `TopicModelingInterface`. `GenAIMethodoneShot` 
+
 
 To install, run `uv pip install -r requirements.txt`. 
 
@@ -10,14 +10,14 @@ To install, run `uv pip install -r requirements.txt`.
 
 **Defaults** are defined in `config.json`. You can override any key from the command line with `--set KEY=VALUE` (repeatable). Integer and boolean keys are coerced; the rest are strings.
 
-Example: `python RunModels.py --dataset NYT --set N_TOPICS=30 --set N_documents=400`
+Example: `python RunModels.py --dataset semeval --set N_TOPICS=30 --set N_documents=400`
 
 Key settings in `config.json` include:
 
 - **VLLM_MODEL**: vLLM model identifier or path
 - **N_TOPICS**, **N_documents**: Number of topics and documents
 - **TOKEN_LIMIT**: Maximum tokens per request
-- **DATASET**: Dataset name (NYT, ARXIV, PUBMED, etc.)
+- **DATASET**: Dataset name (semeval, NYT, MTCSD etc.)
 - **EMBEDDING_MODEL**: Embedding model for BERTopic
 - **OUTPUT_DIR**: Directory for output files
 

@@ -365,6 +365,7 @@ class StanceDetectionInterface:
                 "max_tokens_generation": 2000,
             }
 
+        run_folder.mkdir(parents=True, exist_ok=True)
         pd.DataFrame(doc_assignments_rows).to_csv(run_folder / "document_assignments.csv", index=False)
 
         carbon_tracking_total = None
