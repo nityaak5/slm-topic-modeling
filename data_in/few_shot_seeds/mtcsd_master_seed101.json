@@ -1,0 +1,92 @@
+[
+  {
+    "row_id": "6243",
+    "query": "SpaceX",
+    "document": "Worth it, especially all the benefits that could be gained through this decade if the program continues.",
+    "stance": "FAVOR"
+  },
+  {
+    "row_id": "11482",
+    "query": "Trump",
+    "document": "Because they knew he had it, asked for it back, didn’t get it all back and so they went and got it. The number of chances he’s had with this is unprecedented.",
+    "stance": "AGAINST"
+  },
+  {
+    "row_id": "12502",
+    "query": "Trump",
+    "document": "Trump doesn’t do electronics. No chance he has taken pictures or scanned them digitally. They only exist as-is, in the physical. This has been well known for years",
+    "stance": "NONE"
+  },
+  {
+    "row_id": "4549",
+    "query": "Bitcoin",
+    "document": "This is really a huge step to increase adoption.",
+    "stance": "FAVOR"
+  },
+  {
+    "row_id": "10326",
+    "query": "Trump",
+    "document": "He keeps saying at his rallies that he won the election in 2016 and 2020. If he won twice doesn’t that make him ineligible to run for President again?",
+    "stance": "AGAINST"
+  },
+  {
+    "row_id": "6066",
+    "query": "SpaceX",
+    "document": "A lot of this SpaceX work is under nasa envelope",
+    "stance": "NONE"
+  },
+  {
+    "row_id": "788",
+    "query": "Biden",
+    "document": "I mean Intel is trying to change that. There's plans to build a major US semiconductor manufacturer near Columbus Ohio. It is kind of weird that it took this long to happen though.",
+    "stance": "FAVOR"
+  },
+  {
+    "row_id": "1865",
+    "query": "Biden",
+    "document": "Biden hasn’t ever been more right.",
+    "stance": "AGAINST"
+  },
+  {
+    "row_id": "8564",
+    "query": "Tesla",
+    "document": "For all the Tesla fans who've been finding their way here lately",
+    "stance": "NONE"
+  },
+  {
+    "row_id": "10080",
+    "query": "Trump",
+    "document": "\"He came to me with tears in his eyes and said 'Sir, you're the greatest pleader of the 5th I've ever seen.'\"",
+    "stance": "FAVOR"
+  },
+  {
+    "row_id": "1381",
+    "query": "Biden",
+    "document": "That feels more like a Trump move.",
+    "stance": "AGAINST"
+  },
+  {
+    "row_id": "8054",
+    "query": "Tesla",
+    "document": "Is Tesla's anywhere near self-driving either",
+    "stance": "NONE"
+  },
+  {
+    "row_id": "3250",
+    "query": "Bitcoin",
+    "document": "I wouldn't be surprised if it was set up by banks and governments",
+    "stance": "FAVOR"
+  },
+  {
+    "row_id": "7757",
+    "query": "Tesla",
+    "document": "I think I’ll go with an EV from KIA or maybe even a Chevy Volt. Open source charging standards and door handles that work like door handles",
+    "stance": "AGAINST"
+  },
+  {
+    "row_id": "1306",
+    "query": "Biden",
+    "document": "Are you saying that Hunter Biden becomes Bruce Wayne?",
+    "stance": "NONE"
+  }
+]

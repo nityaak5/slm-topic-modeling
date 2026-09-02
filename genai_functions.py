@@ -103,9 +103,21 @@ def get_llm():
         enforce_eager = os.getenv("VLLM_ENFORCE_EAGER", "true").lower() in ("1", "true", "yes")
         trust_remote_code = os.getenv("VLLM_TRUST_REMOTE_CODE", "false").lower() in ("1", "true", "yes")
         gpu_mem_util = os.getenv("VLLM_GPU_MEMORY_UTILIZATION")
+        # vLLM requires max_num_batched_tokens >= max_model_len (otherwise it can't schedule
+        # a single full-length sequence). Default to matching max_model_len; override via
+        # VLLM_MAX_NUM_BATCHED_TOKENS if you want finer control over scheduling memory use.
+        max_num_batched_tokens = int(os.getenv("VLLM_MAX_NUM_BATCHED_TOKENS", str(max_model_len)))
+        # vLLM's warmup profiles memory assuming up to max_num_seqs concurrent sequences at
+        # max_model_len -- on a large max_model_len + a single, memory-limited GPU this can
+        # OOM before any real request is served. Not exposed before; default here is
+        # deliberately small since this pipeline runs one-shot classification, not high
+        # concurrency. Override via VLLM_MAX_NUM_SEQS if you want more throughput.
+        max_num_seqs = int(os.getenv("VLLM_MAX_NUM_SEQS", "8"))
         llm_kwargs = {
             "enforce_eager": enforce_eager,
             "max_model_len": max_model_len,
+            "max_num_batched_tokens": max_num_batched_tokens,
+            "max_num_seqs": max_num_seqs,
             "trust_remote_code": trust_remote_code,
         }
         if gpu_mem_util is not None:
@@ -195,7 +207,9 @@ def _format_prompt(prompt):
                 {"role": "system", "content": "You are a helpful assistant designed to output JSON. Output ONLY valid JSON. Do NOT use numbered lists (1., 2., 3.), bullet points (-, •, *), or any other format. Do not include any explanations, examples, notes, or additional text. Return ONLY the JSON object, nothing else."},
                 {"role": "user", "content": prompt}
             ]
-            return tokenizer.apply_chat_template(messages, tokenize=False, add_generation_prompt=True)
+            # return tokenizer.apply_chat_template(messages, tokenize=False, add_generation_prompt=True)
+            return tokenizer.apply_chat_template(messages, tokenize=False, add_generation_prompt=True, enable_thinking=False)
+
         else:
             # Fallback to plain text for non-chat models
             return f"You are a helpful assistant designed to output JSON. Output ONLY valid JSON. Do NOT use numbered lists (1., 2., 3.), bullet points (-, •, *), or any other format. Do not include any explanations, examples, notes, or additional text. Return ONLY the JSON object, nothing else.\n\n{prompt}"
@@ -721,26 +735,46 @@ def stance_classification_prompt_no_label_definitions(content, query):
     return prompt
 
 
+# def stance_classification_task_definition(content, query):
+#     # v2: NONE defined as EZ-STANCE's epistemic 'cannot know'
+#     prompt = (
+#         "Stance classification is the task of determining the expressed or implied opinion, "
+#         "or stance, of a document toward a certain, specified target. "
+#         "Analyze the following document and determine its stance toward the provided query.\n\n"
+#     )
+#     prompt += f"query: {query}\n"
+#     prompt += f"document: {content}\n"
+#     prompt += 'Return ONLY valid JSON in exactly this format: {"stance": "FAVOR"}\n'
+#     prompt += 'The "stance" value must be exactly one of: "FAVOR", "AGAINST", "NONE".\n'
+#     prompt += (
+#         'Use "FAVOR" only when the author is definitely in favor of the query. '
+#         'Use "AGAINST" only when the author is definitely against the query. '
+#         'Use "NONE" when, based solely on the information in the document, we cannot know '
+#         'whether the author definitely supports or opposes the query. '
+#         'If the query is relevant to the document but the author\'s position on it cannot '
+#         'be determined for certain, the answer is "NONE". Do not guess from hints.'
+#     )
+#     return prompt
 def stance_classification_task_definition(content, query):
-    # v2: NONE defined as EZ-STANCE's epistemic 'cannot know'
     prompt = (
         "Stance classification is the task of determining the expressed or implied opinion, "
         "or stance, of a document toward a certain, specified target. "
         "Analyze the following document and determine its stance toward the provided query.\n\n"
     )
-    prompt += f"query: {query}\n"
-    prompt += f"document: {content}\n"
-    prompt += 'Return ONLY valid JSON in exactly this format: {"stance": "FAVOR"}\n'
+    prompt += f"QUERY: {query}\n\n"
+    prompt += f"DOCUMENT: {content}\n\n"
+    prompt += 'Return valid JSON in exactly this format: {"stance": "FAVOR"}\n'
     prompt += 'The "stance" value must be exactly one of: "FAVOR", "AGAINST", "NONE".\n'
     prompt += (
         'Use "FAVOR" only when the author is definitely in favor of the query. '
         'Use "AGAINST" only when the author is definitely against the query. '
-        'Use "NONE" when, based solely on the information in the document, we cannot know '
-        'whether the author definitely supports or opposes the query. '
-        'If the query is relevant to the document but the author\'s position on it cannot '
-        'be determined for certain, the answer is "NONE". Do not guess from hints.'
+        'Use "NONE" if any of the following holds: (a) the document does not discuss the query '
+        "at all, (b) the document discusses it but the author takes no clear side "
+        "(neutral/balanced), or (c) the author's position cannot be determined with confidence. "
+        "Do not guess from indirect hints.\n"
     )
     return prompt
+
 
 # --- v1 task_definition (original) ---
 # def stance_classification_task_definition(content, query):

@@ -71,3 +71,5 @@ exp_id,llm_backend,openai_model,vllm_model,vllm_max_model_len,task_type,method_t
 70,vllm,,deepseek-ai/DeepSeek-R1-Distill-Qwen-32B,40960,stance_detection,GenAIStanceOneShot,few_shot,data_in/semeval/semeval2016_task6_testdata_gold,content,query,stance_label
 71,vllm,,deepseek-ai/DeepSeek-R1-Distill-Qwen-32B,40960,stance_detection,GenAIStanceOneShot,question,data_in/semeval/semeval2016_task6_testdata_gold,content,query,stance_label
 72,vllm,,deepseek-ai/DeepSeek-R1-Distill-Qwen-32B,40960,stance_detection,GenAIStanceOneShot,cot,data_in/semeval/semeval2016_task6_testdata_gold,content,query,stance_label
+74,vllm,,Qwen/Qwen3-4B-Instruct-2507,262144,stance_detection,GenAIStanceOneShot,task_definition,data_in/mtcsd/mtcsd_test.csv,content,query,stance_label
+75,vllm,,Qwen/Qwen3-4B-Instruct-2507,262144,stance_detection,GenAIStanceOneShot,task_definition,data_in/ezstance/ezstance_test_mixed.csv,content,query,stance_label
